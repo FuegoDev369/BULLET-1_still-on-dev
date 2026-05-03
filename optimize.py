@@ -24,6 +24,7 @@ Author: FuegoDev
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -139,6 +140,12 @@ def main() -> int:
         metavar="PATH",
         help="Chemin vers config.json (défaut : config/config.json)"
     )
+    parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        dest="non_interactive",
+        help="Mode non-interactif : continue automatiquement sans prompt (utile pour CI/CD)"
+    )
     args = parser.parse_args()
 
     cfg_path = str(_ROOT / args.config)
@@ -173,10 +180,15 @@ def main() -> int:
                     f"Appliquez best_config_*.json avant la phase suivante "
                     f"si vous souhaitez enchaîner avec la meilleure configuration.{_E}\n"
                 )
-                cont = input(
-                    f"Continuer avec la Phase {phases_to_run[phases_to_run.index(phase)+1].upper()} "
-                    f"(config.json actuelle) ? [O/n] : "
-                ).strip().lower()
+                next_phase = phases_to_run[phases_to_run.index(phase) + 1].upper()
+                if os.environ.get("CI") or args.non_interactive:
+                    print(f"{_Y}⚙️  Mode CI : continuation automatique → Phase {next_phase}.{_E}\n")
+                    cont = "o"
+                else:
+                    cont = input(
+                        f"Continuer avec la Phase {next_phase} "
+                        f"(config.json actuelle) ? [O/n] : "
+                    ).strip().lower()
                 if cont not in ("", "o", "oui", "y", "yes"):
                     print(f"{_Y}Optimisation arrêtée après Phase {phase.upper()}.{_E}")
                     return 0

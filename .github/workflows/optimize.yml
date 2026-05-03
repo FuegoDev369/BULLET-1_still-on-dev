@@ -1,0 +1,190 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║         BULLET-1 — Optimisation via GitHub Actions              ║
+# ║                                                                  ║
+# ║  Déclencher manuellement depuis l'onglet "Actions" de GitHub.   ║
+# ║  Récupérer les résultats :                                       ║
+# ║    git pull   →  dossier results/ mis à jour                     ║
+# ║    Onglet Actions → dernier run → Artifacts → télécharger logs  ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+name: 🎯 BULLET-1 — Optimisation
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "Phase d'optimisation"
+        required: true
+        type: choice
+        default: "2a"
+        options:
+          - "2a"     # ~432 runs  ≈ 86 min
+          - "2b"     # ~243 runs  ≈ 49 min
+          - "2c"     #  ~72 runs  ≈ 14 min
+          - "all"    # ~747 runs  ≈ 149 min
+
+      config_file:
+        description: "Fichier de config (relatif à la racine du repo)"
+        required: false
+        default: "config/config.json"
+
+      save_top_n:
+        description: "Nombre de top configs à sauvegarder (1-20)"
+        required: false
+        default: "10"
+
+# Évite les runs simultanés sur la même branche (évite conflits git)
+concurrency:
+  group: bullet1-optimize-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  optimize:
+    name: "Phase ${{ inputs.phase }} — Grid Search"
+    runs-on: ubuntu-latest
+    timeout-minutes: 200   # Largement au-dessus de la durée max (all ≈ 149 min)
+
+    steps:
+      # ── 1. Checkout avec support Git LFS (pour bullet1_market_data.db) ──
+      - name: 📥 Checkout repo (+ Git LFS)
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Fetch toute l'histoire pour pouvoir pusher les résultats
+          fetch-depth: 0
+
+      # ── 2. Vérification de la DB ──
+      - name: 🗄️ Vérifier la base de données
+        run: |
+          if [ ! -f "data/bullet1_market_data.db" ]; then
+            echo "❌ ERREUR : data/bullet1_market_data.db introuvable !"
+            echo "   Vérifiez que Git LFS est bien configuré et que la DB est trackée."
+            exit 1
+          fi
+          DB_SIZE=$(du -sh data/bullet1_market_data.db | cut -f1)
+          echo "✅ DB trouvée — Taille : $DB_SIZE"
+          python3 data/db_status.py || echo "(db_status.py non critique)"
+
+      # ── 3. Python ──
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # ── 4. Dépendances ──
+      - name: 📦 Installer les dépendances
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "✅ Dépendances installées :"
+          pip list | grep -E "pandas|numpy|matplotlib"
+
+      # ── 5. Ajustement dynamique du config (save_top_n) ──
+      - name: ⚙️ Appliquer paramètres de lancement
+        run: |
+          python3 - << 'EOF'
+          import json, sys
+          cfg_path = "${{ inputs.config_file }}"
+          top_n = int("${{ inputs.save_top_n }}")
+          with open(cfg_path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("optimization", {}).setdefault("output", {})["save_top_n_configs"] = top_n
+          with open(cfg_path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print(f"✅ save_top_n_configs = {top_n}")
+          EOF
+
+      # ── 6. Lancement de l'optimisation ──
+      - name: 🚀 Lancer l'optimisation — Phase ${{ inputs.phase }}
+        run: |
+          echo "════════════════════════════════════════════"
+          echo "  🎯 BULLET-1 Optimizer"
+          echo "  Phase    : ${{ inputs.phase }}"
+          echo "  Config   : ${{ inputs.config_file }}"
+          echo "  Top N    : ${{ inputs.save_top_n }}"
+          echo "  Runner   : $(uname -m) | $(nproc) CPUs | $(free -h | awk '/^Mem:/{print $2}') RAM"
+          echo "  Démarrage: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "════════════════════════════════════════════"
+          python3 optimize.py \
+            --phase "${{ inputs.phase }}" \
+            --config "${{ inputs.config_file }}" \
+            --non-interactive
+          echo ""
+          echo "✅ Optimisation terminée : $(date '+%Y-%m-%d %H:%M:%S UTC')"
+
+      # ── 7. Résumé des résultats ──
+      - name: 📊 Résumé des résultats
+        if: always()
+        run: |
+          RESULTS_DIR="results/optimization"
+          echo "## 📊 Résultats — Phase ${{ inputs.phase }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -d "$RESULTS_DIR" ]; then
+            echo "**Fichiers générés :**" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            find "$RESULTS_DIR" -type f -newer data/bullet1_market_data.db \
+              | sort | head -30 \
+              | while read f; do echo "  $f ($(du -sh "$f" | cut -f1))"; done
+            echo '```' >> $GITHUB_STEP_SUMMARY
+
+            # Chercher le meilleur résultat dans les JSON
+            BEST_JSON=$(find "$RESULTS_DIR" -name "best_config*.json" -newer data/bullet1_market_data.db \
+              | sort | tail -1)
+            if [ -n "$BEST_JSON" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**🏆 Meilleure configuration trouvée :** \`$(basename $BEST_JSON)\`" >> $GITHUB_STEP_SUMMARY
+              echo '```json' >> $GITHUB_STEP_SUMMARY
+              python3 -c "
+          import json, sys
+          with open('$BEST_JSON') as f:
+              d = json.load(f)
+          # Afficher uniquement les métriques clés
+          keys = ['sharpe_ratio','profit_factor','total_trades','win_rate','max_drawdown_pct','net_pnl_pct']
+          metrics = {k: d.get(k, d.get('metrics', {}).get(k, 'N/A')) for k in keys}
+          print(json.dumps(metrics, indent=2))
+          " 2>/dev/null || cat "$BEST_JSON" | head -30
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "⚠️ Aucun résultat trouvé dans \`$RESULTS_DIR\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # ── 8. Upload des résultats comme Artifact GitHub ──
+      - name: 📁 Upload des résultats (Artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "results-phase-${{ inputs.phase }}-${{ github.run_number }}"
+          path: |
+            results/optimization/
+          retention-days: 30
+          if-no-files-found: warn
+
+      # ── 9. Commit et push des résultats dans le repo ──
+      - name: 💾 Commit & Push des résultats
+        if: success()
+        run: |
+          git config user.name  "BULLET-1 Actions Bot"
+          git config user.email "bullet1-bot@github-actions"
+
+          # Ajouter uniquement les résultats (pas la DB ni credentials)
+          git add results/ || true
+          git add config/config.json || true   # config potentiellement modifiée (save_top_n)
+
+          # Vérifier s'il y a des changements à committer
+          if git diff --staged --quiet; then
+            echo "ℹ️ Aucun changement à committer (résultats identiques ou déjà présents)."
+          else
+            TIMESTAMP=$(date '+%Y-%m-%d %H:%M UTC')
+            git commit -m "🤖 [Actions] Résultats optimisation — Phase ${{ inputs.phase }} — $TIMESTAMP
+
+          Run #${{ github.run_number }} | Déclenché par : ${{ github.actor }}
+          Config : ${{ inputs.config_file }}
+          Top N  : ${{ inputs.save_top_n }} configs sauvegardées"
+
+            git push origin HEAD:${{ github.ref_name }}
+            echo "✅ Résultats poussés sur la branche '${{ github.ref_name }}'"
+            echo "   → Récupérer avec : git pull"
+          fi
