@@ -1,0 +1,15 @@
+{
+  "data_validator": {
+    "max_price_change_pct": 20.0,
+    
+    "outlier_sigma": 5.0,
+    
+    "min_volume": 0.0,
+    
+    "max_volume_spike_ratio": 10.0,
+    
+    "gap_tolerance_multiplier": 1.5,
+    
+    "min_data_points": 10
+  }
+}

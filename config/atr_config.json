@@ -1,0 +1,56 @@
+{
+  "general": {
+    "mode": "backtest"
+  },
+  "atr_parameters": {
+    "period": 21,
+    "base_multiplier": 2.0,
+    "smoothing_method": "ema"
+  },
+  "validation_limits": {
+    "min_atr_period": 7,
+    "max_atr_period": 50,
+    "min_base_multiplier": 0.5,
+    "max_base_multiplier": 5.0
+  },
+  "market_conditions": {
+    "enable_validation": false,
+    "min_volatility": 0.5,
+    "max_volatility": 3.0
+  },
+  "cache_configuration": {
+    "backtest": {
+      "atr_cache_size": 0,
+      "tr_cache_size": 0
+    },
+    "paper_live": {
+      "atr_cache_size": 100,
+      "tr_cache_size": 50
+    }
+  },
+  "anomaly_detection": {
+    "enable_spike_detection": true,
+    "spike_threshold": 3.0,
+    "spike_min_samples": 10,
+    "enable_crash_detection": true,
+    "crash_threshold": 3.0,
+    "enable_auto_recalibrate": true,
+    "recalibrate_threshold": 3.0
+  },
+  "trailing_stop": {
+    "types_supported": [
+      "atr",
+      "hybrid"
+    ]
+  },
+  "thread_safety": {
+    "enable_thread_safety": true,
+    "lock_type": "RLock"
+  },
+  "statistics": {
+    "enable_statistics": true,
+    "track_spike_count": true,
+    "track_recalibrate_count": true,
+    "track_update_count": true
+  }
+}

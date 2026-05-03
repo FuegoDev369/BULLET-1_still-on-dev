@@ -1,0 +1,93 @@
+{
+  "general": {
+    "mode": {
+      "value": "backtest",
+      "required": true
+    }
+  },
+  
+  "indicators": {
+    "volume_lookback_period": {
+      "value": 1,
+      "min": 1,
+      "max": 3,
+      "required": true
+    },
+    
+    "volume_spike_threshold": {
+      "value": 2.2,
+      "min": 0.5,
+      "max": 5.0,
+      "required": false,
+      "default": 2.0
+    },
+    
+    "min_volume_threshold": {
+      "value": 0.01,
+      "min": 0.0,
+      "max": 1000000.0,
+      "required": false,
+      "default": 0.01
+    },
+    
+    "volume_trend_short_period": {
+      "value": 7,
+      "min": 2,
+      "max": 50,
+      "required": false,
+      "default": 5
+    },
+    
+    "volume_trend_long_period": {
+      "value": 20,
+      "min": 3,
+      "max": 200,
+      "required": false,
+      "default": 20
+    }
+  },
+  
+  "cache": {
+    "buffer_size": {
+      "value": 500,
+      "min": 100,
+      "max": 5000,
+      "required": false,
+      "default": 500
+    },
+    
+    "max_latency_ms": {
+      "value": 50.0,
+      "min": 10.0,
+      "max": 500.0,
+      "required": false,
+      "default": 50.0
+    }
+  },
+  
+  "validation": {
+    "max_nan_percentage": {
+      "value": 5.0,
+      "min": 0.0,
+      "max": 20.0,
+      "required": false,
+      "default": 5.0
+    }
+  },
+  
+  "logging": {
+    "log_performance": {
+      "value": true,
+      "required": false,
+      "default": true
+    },
+    
+    "performance_log_interval": {
+      "value": 100,
+      "min": 1,
+      "max": 10000,
+      "required": false,
+      "default": 100
+    }
+  }
+}

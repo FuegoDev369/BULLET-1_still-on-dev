@@ -1,0 +1,25 @@
+{
+  "_metadata": {
+    "module": "BULLET-1 - Market Regime Indicators",
+    "file": "regime_config.slim.json",
+    "version": "2.1.0",
+    "author": "FuegoDev",
+    "note": "Version épurée — paramètres seuls. Version documentée : regime_config.json"
+  },
+  "general": {
+    "mode": "backtest"
+  },
+  "parameters": {
+    "adx_period": 14,
+    "vr_short_window": 5,
+    "vr_long_window": 20,
+    "adx_threshold_trend": 20.0,
+    "adx_threshold_strong": 40.0,
+    "adx_threshold_very_strong": 60.0,
+    "vr_momentum_threshold": 1.05,
+    "vr_meanrev_threshold": 0.95
+  },
+  "cache": {
+    "buffer_size": 500
+  }
+}

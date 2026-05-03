@@ -1,0 +1,12 @@
+{
+  "simulation": {
+    "maker_fee": 0.02,
+    "taker_fee": 0.04,
+    "slippage_dynamic": true,
+    "slippage_base": 0.0012,
+    "slippage_max": 0.005,
+    "spread_pct": 0.02,
+    "api_latency_ms": 200,
+    "funding_rate_8h": 0.01
+    }
+}

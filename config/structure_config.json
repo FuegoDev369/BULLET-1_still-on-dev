@@ -1,0 +1,23 @@
+{
+  "_metadata": {
+    "module": "BULLET-1 - Structure Indicators",
+    "file": "structure_config.slim.json",
+    "version": "2.1.0",
+    "author": "FuegoDev",
+    "note": "Version épurée — paramètres seuls. Version documentée : structure_config.json"
+  },
+  "general": {
+    "mode": "backtest"
+  },
+  "parameters": {
+    "zscore_period": 20,
+    "swing_bars": 3,
+    "swing_lookback": 50,
+    "bos_lookback": 20,
+    "session_anchor": "daily",
+    "anchor_candle_count": 100
+  },
+  "cache": {
+    "buffer_size": 500
+  }
+}

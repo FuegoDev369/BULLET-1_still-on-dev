@@ -1,0 +1,27 @@
+{
+  "_metadata": {
+    "module": "BULLET-1 - Volatility Indicators",
+    "file": "volatility_config.slim.json",
+    "version": "2.1.0",
+    "author": "FuegoDev",
+    "note": "Version épurée — paramètres seuls. Version documentée : volatility_config.json"
+  },
+  "general": {
+    "mode": "backtest"
+  },
+  "parameters": {
+    "bb_period": 20,
+    "bb_std_dev": 2.0,
+    "kc_period": 20,
+    "kc_atr_period": 10,
+    "kc_multiplier": 1.5,
+    "rv_short_period": 5,
+    "rv_long_period": 20,
+    "annualize_factor": null,
+    "chandelier_period": 22,
+    "chandelier_multiplier": 3.0
+  },
+  "cache": {
+    "buffer_size": 500
+  }
+}

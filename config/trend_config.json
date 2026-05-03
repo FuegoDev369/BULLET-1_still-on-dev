@@ -1,0 +1,22 @@
+{
+  "general": {
+    "mode": "backtest"
+  },
+  "moving_averages": {
+    "type": "ema",
+    "fast_period": 9,
+    "slow_period": 21,
+    "slope_calculation_periods": 3
+  },
+  "trend_detection": {
+    "trend_strength_threshold": 0.002,
+    "min_crossover_separation": 0.005
+  },
+  "quality_scoring": {
+    "slope_threshold": 0.02,
+    "strength_multiplier": 10
+  },
+  "validation": {
+    "enforce_mode_consistency": true
+  }
+}

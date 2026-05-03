@@ -1,0 +1,43 @@
+{
+  "general": {
+    "mode": "backtest"
+  },
+  
+  "logging": {
+    "level": "auto",
+    "console": true,
+    "colorize_console": true,
+    "include_timestamp": true,
+    "include_module_name": true,
+    
+    "files": {
+      "main_log": "logs/bullet1.log",
+      "trading_log": "logs/trading.log",
+      "error_log": "logs/errors.log",
+      "api_log": "logs/api.log",
+      "session_log": "logs/sessions.log",
+      "circuit_breaker_log": "logs/circuit_breaker.log",
+      "backtest_log": "logs/backtest.log"
+    },
+    
+    "rotation": {
+      "max_bytes": 10485760,
+      "backup_count": 10,
+      "compress_old_logs": false
+    },
+    
+    "retention": {
+      "enabled": true,
+      "days": 30,
+      "auto_cleanup": true
+    },
+    
+    "live_mode": {
+      "flush_critical": true,
+      "alert_threshold": 5,
+      "alert_window_minutes": 5,
+      "auto_backup": true,
+      "backup_interval_hours": 6
+    }
+  }
+}

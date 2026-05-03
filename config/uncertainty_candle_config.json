@@ -1,0 +1,41 @@
+{
+  "_version": "2.2.1",
+  "detection": {
+    "body_max_pct": 10.0,
+    "wick_min_pct": 35.0,
+    "require_both_wicks": true
+  },
+  "filters": {
+    "min_candle_body_usdt": 10.0,
+    "max_candle_range_usdt": 100000.0
+  },
+  "validation": {
+    "strict_validation": true
+  },
+  "features": {
+    "enable_advanced_metrics": true,
+    "enable_doji_classification": true,
+    "enable_batch_statistics": true
+  },
+  "export": {
+    "enabled": true,
+    "default_format": "json",
+    "json": {
+      "indent": 2,
+      "include_metadata": true
+    },
+    "csv": {
+      "delimiter": ",",
+      "encoding": "utf-8",
+      "flatten_nested": true
+    },
+    "auto_export": {
+      "enabled": false,
+      "directory": "exports/uncertainty_candles"
+    },
+    "compression": {
+      "enabled": false,
+      "level": 6
+    }
+  }
+}

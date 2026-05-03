@@ -1,0 +1,10 @@
+{
+  "analytics_reports": {
+    "generate_html": true,
+    "generate_markdown": false,
+    "generate_json": true,
+    "generate_csv": false,
+    "charts_enabled": false,
+    "output_base_dir": "results/backtests/sessions/"
+  }
+}
