@@ -1,8 +1,12 @@
-# Tools
+## Base de données
+data/bullet1_market_data.db # La base de données est versionnée avec Git LFS car elle fait plus de 50Mo et va potentiellement plus grandir avec le temps.Consulter git-lfs-workflow-guide.md pour le guide.
+
+## Tools
 pycaches_cleaner_v1.0.py
 FIND_IT_v3.0.1.py
 sniper_cleaner_v1.1.0.py
 structure_tracker_v1.0.py
 
-#Indésirables
+
+## Indésirables
 data/bullet1_market_data.db-journal
