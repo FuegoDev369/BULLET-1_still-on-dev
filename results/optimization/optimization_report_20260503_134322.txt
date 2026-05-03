@@ -1,0 +1,10 @@
+========================================================================
+BULLET-1 — RAPPORT D'OPTIMISATION
+========================================================================
+Généré le  : 2026-05-03 13:43 UTC
+Config     : /home/runner/work/BULLET-1_still-on-dev/BULLET-1_still-on-dev/config/_optim_phase_2c_tmp.json
+Période    : 2024-03-14 → 2024-04-23
+Total runs : 144 | Valides : 0
+========================================================================
+
+Aucun run valide.
