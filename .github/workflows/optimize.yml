@@ -1,10 +1,12 @@
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║         BULLET-1 — Optimisation via GitHub Actions              ║
+# ║         BULLET-1 — Optimisation + Notifications CI/CD           ║
 # ║                                                                  ║
-# ║  Déclencher manuellement depuis l'onglet "Actions" de GitHub.   ║
-# ║  Récupérer les résultats :                                       ║
-# ║    git pull   →  dossier results/ mis à jour                     ║
-# ║    Onglet Actions → dernier run → Artifacts → télécharger logs  ║
+# ║  Déclencher : onglet Actions → Run workflow                     ║
+# ║                                                                  ║
+# ║  Secrets GitHub requis (Settings → Secrets → Actions) :         ║
+# ║    Telegram : TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID             ║
+# ║    Discord  : DISCORD_WEBHOOK_URL                               ║
+# ║  → Si un secret est absent, ce canal est silencieusement ignoré ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 name: 🎯 BULLET-1 — Optimisation
@@ -18,76 +20,84 @@ on:
         type: choice
         default: "2a"
         options:
-          - "2a"     # ~432 runs  ≈ 86 min
-          - "2b"     # ~243 runs  ≈ 49 min
-          - "2c"     #  ~72 runs  ≈ 14 min
-          - "all"    # ~747 runs  ≈ 149 min
-
+          - "2a"
+          - "2b"
+          - "2c"
+          - "all"
       config_file:
-        description: "Fichier de config (relatif à la racine du repo)"
+        description: "Fichier de config (relatif à la racine)"
         required: false
         default: "config/config.json"
-
       save_top_n:
         description: "Nombre de top configs à sauvegarder (1-20)"
         required: false
         default: "10"
+      notifications:
+        description: "Niveau de notifications"
+        required: false
+        type: choice
+        default: "all"
+        options:
+          - "all"
+          - "start_end"
+          - "off"
 
-# Évite les runs simultanés sur la même branche (évite conflits git)
 concurrency:
   group: bullet1-optimize-${{ github.ref }}
   cancel-in-progress: false
+
+env:
+  TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  NOTIFY_MODE:         ${{ inputs.notifications }}
+  RESULTS_DIR:         results/optimization
+  PHASE:               ${{ inputs.phase }}
+  CONFIG_FILE:         ${{ inputs.config_file }}
+  TOP_N:               ${{ inputs.save_top_n }}
 
 jobs:
   optimize:
     name: "Phase ${{ inputs.phase }} — Grid Search"
     runs-on: ubuntu-latest
-    timeout-minutes: 200   # Largement au-dessus de la durée max (all ≈ 149 min)
+    timeout-minutes: 360
 
     steps:
-      # ── 1. Checkout avec support Git LFS (pour bullet1_market_data.db) ──
-      - name: 📥 Checkout repo (+ Git LFS)
+      - name: 📥 Checkout (+ Git LFS pour la DB)
         uses: actions/checkout@v4
         with:
           lfs: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Fetch toute l'histoire pour pouvoir pusher les résultats
           fetch-depth: 0
 
-      # ── 2. Vérification de la DB ──
       - name: 🗄️ Vérifier la base de données
         run: |
           if [ ! -f "data/bullet1_market_data.db" ]; then
-            echo "❌ ERREUR : data/bullet1_market_data.db introuvable !"
-            echo "   Vérifiez que Git LFS est bien configuré et que la DB est trackée."
+            echo "❌ data/bullet1_market_data.db introuvable !"
             exit 1
           fi
-          DB_SIZE=$(du -sh data/bullet1_market_data.db | cut -f1)
-          echo "✅ DB trouvée — Taille : $DB_SIZE"
-          python3 data/db_status.py || echo "(db_status.py non critique)"
+          echo "✅ DB trouvée — $(du -sh data/bullet1_market_data.db | cut -f1)"
 
-      # ── 3. Python ──
       - name: 🐍 Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
-      # ── 4. Dépendances ──
       - name: 📦 Installer les dépendances
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          echo "✅ Dépendances installées :"
-          pip list | grep -E "pandas|numpy|matplotlib"
+        run: pip install --upgrade pip && pip install -r requirements.txt
 
-      # ── 5. Ajustement dynamique du config (save_top_n) ──
-      - name: ⚙️ Appliquer paramètres de lancement
+      - name: 🔧 Préparer les scripts
+        run: |
+          chmod +x scripts/notify.sh
+          mkdir -p results/optimization
+
+      - name: ⚙️ Paramétrage config (save_top_n)
         run: |
           python3 - << 'EOF'
-          import json, sys
-          cfg_path = "${{ inputs.config_file }}"
-          top_n = int("${{ inputs.save_top_n }}")
+          import json
+          cfg_path = "${{ env.CONFIG_FILE }}"
+          top_n = int("${{ env.TOP_N }}")
           with open(cfg_path) as f:
               cfg = json.load(f)
           cfg.setdefault("optimization", {}).setdefault("output", {})["save_top_n_configs"] = top_n
@@ -96,95 +106,138 @@ jobs:
           print(f"✅ save_top_n_configs = {top_n}")
           EOF
 
-      # ── 6. Lancement de l'optimisation ──
-      - name: 🚀 Lancer l'optimisation — Phase ${{ inputs.phase }}
+      # ── 🔔 Notification : Démarrage ──────────────────────────────
+      - name: 🔔 Notification — Démarrage
+        if: env.NOTIFY_MODE != 'off'
+        run: |
+          bash scripts/notify.sh start \
+            "${{ env.PHASE }}" \
+            "${{ env.CONFIG_FILE }}" \
+            "${{ env.TOP_N }}"
+
+      # ── 🚀 OPTIMISATION ──────────────────────────────────────────
+      - name: 🚀 Optimisation — Phase ${{ inputs.phase }}
+        id: optimization
         run: |
           echo "════════════════════════════════════════════"
-          echo "  🎯 BULLET-1 Optimizer"
-          echo "  Phase    : ${{ inputs.phase }}"
-          echo "  Config   : ${{ inputs.config_file }}"
-          echo "  Top N    : ${{ inputs.save_top_n }}"
+          echo "  BULLET-1 Optimizer"
+          echo "  Phase    : ${{ env.PHASE }}"
+          echo "  Config   : ${{ env.CONFIG_FILE }}"
           echo "  Runner   : $(uname -m) | $(nproc) CPUs | $(free -h | awk '/^Mem:/{print $2}') RAM"
           echo "  Démarrage: $(date '+%Y-%m-%d %H:%M:%S UTC')"
           echo "════════════════════════════════════════════"
           python3 optimize.py \
-            --phase "${{ inputs.phase }}" \
-            --config "${{ inputs.config_file }}" \
+            --phase "${{ env.PHASE }}" \
+            --config "${{ env.CONFIG_FILE }}" \
             --non-interactive
-          echo ""
-          echo "✅ Optimisation terminée : $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "✅ Terminé : $(date '+%Y-%m-%d %H:%M:%S UTC')"
 
-      # ── 7. Résumé des résultats ──
-      - name: 📊 Résumé des résultats
-        if: always()
+      # ── 📊 Parser les résultats ───────────────────────────────────
+      - name: 📊 Parser les résultats
+        id: results
+        if: always() && steps.optimization.outcome != 'skipped'
         run: |
-          RESULTS_DIR="results/optimization"
-          echo "## 📊 Résultats — Phase ${{ inputs.phase }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -d "$RESULTS_DIR" ]; then
-            echo "**Fichiers générés :**" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            find "$RESULTS_DIR" -type f -newer data/bullet1_market_data.db \
-              | sort | head -30 \
-              | while read f; do echo "  $f ($(du -sh "$f" | cut -f1))"; done
-            echo '```' >> $GITHUB_STEP_SUMMARY
+          python3 scripts/parse_results.py \
+            --results-dir "${{ env.RESULTS_DIR }}" \
+            --phase "${{ env.PHASE }}" \
+            --mode best
 
-            # Chercher le meilleur résultat dans les JSON
-            BEST_JSON=$(find "$RESULTS_DIR" -name "best_config*.json" -newer data/bullet1_market_data.db \
-              | sort | tail -1)
-            if [ -n "$BEST_JSON" ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "**🏆 Meilleure configuration trouvée :** \`$(basename $BEST_JSON)\`" >> $GITHUB_STEP_SUMMARY
-              echo '```json' >> $GITHUB_STEP_SUMMARY
-              python3 -c "
-          import json, sys
-          with open('$BEST_JSON') as f:
-              d = json.load(f)
-          # Afficher uniquement les métriques clés
-          keys = ['sharpe_ratio','profit_factor','total_trades','win_rate','max_drawdown_pct','net_pnl_pct']
-          metrics = {k: d.get(k, d.get('metrics', {}).get(k, 'N/A')) for k in keys}
-          print(json.dumps(metrics, indent=2))
-          " 2>/dev/null || cat "$BEST_JSON" | head -30
-              echo '```' >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "⚠️ Aucun résultat trouvé dans \`$RESULTS_DIR\`" >> $GITHUB_STEP_SUMMARY
-          fi
+      # ── 🔔 Notification : Résumé final ────────────────────────────
+      - name: 🔔 Notification — Résumé final
+        if: success() && env.NOTIFY_MODE != 'off'
+        env:
+          BEST_CONFIG: ${{ steps.results.outputs.best_config_name }}
+          BEST_SHARPE: ${{ steps.results.outputs.best_sharpe }}
+          BEST_PF:     ${{ steps.results.outputs.best_pf }}
+          BEST_WR:     ${{ steps.results.outputs.best_wr }}
+          BEST_DD:     ${{ steps.results.outputs.best_dd }}
+          BEST_TRADES: ${{ steps.results.outputs.best_trades }}
+        run: |
+          bash scripts/notify.sh final_summary \
+            "${{ env.PHASE }}" \
+            "${BEST_CONFIG:-N/A}" \
+            "${BEST_SHARPE:-N/A}" \
+            "${BEST_PF:-N/A}" \
+            "${BEST_WR:-N/A}" \
+            "${BEST_DD:-N/A}" \
+            "${BEST_TRADES:-N/A}"
 
-      # ── 8. Upload des résultats comme Artifact GitHub ──
-      - name: 📁 Upload des résultats (Artifact)
-        if: always()
+      # ── 🔔 Notification : Erreur ──────────────────────────────────
+      - name: 🔔 Notification — Erreur
+        if: failure() && env.NOTIFY_MODE != 'off'
+        run: |
+          bash scripts/notify.sh error \
+            "${{ env.PHASE }}" \
+            "Consulter les logs du run GitHub Actions" \
+            "optimize.py"
+
+      # ── 📁 Upload Artifact ────────────────────────────────────────
+      - name: 📁 Upload Artifact
+        if: always() && steps.optimization.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
-          name: "results-phase-${{ inputs.phase }}-${{ github.run_number }}"
-          path: |
-            results/optimization/
+          name: "results-phase-${{ env.PHASE }}-run${{ github.run_number }}"
+          path: results/optimization/
           retention-days: 30
           if-no-files-found: warn
 
-      # ── 9. Commit et push des résultats dans le repo ──
-      - name: 💾 Commit & Push des résultats
+      # ── 💾 Commit & Push ──────────────────────────────────────────
+      - name: 💾 Commit & Push résultats
+        id: git_push
         if: success()
         run: |
           git config user.name  "BULLET-1 Actions Bot"
           git config user.email "bullet1-bot@github-actions"
-
-          # Ajouter uniquement les résultats (pas la DB ni credentials)
-          git add results/ || true
-          git add config/config.json || true   # config potentiellement modifiée (save_top_n)
-
-          # Vérifier s'il y a des changements à committer
+          git add results/ config/config.json 2>/dev/null || true
           if git diff --staged --quiet; then
-            echo "ℹ️ Aucun changement à committer (résultats identiques ou déjà présents)."
+            echo "ℹ️ Aucun changement à committer."
+            echo "pushed=false" >> $GITHUB_OUTPUT
           else
             TIMESTAMP=$(date '+%Y-%m-%d %H:%M UTC')
-            git commit -m "🤖 [Actions] Résultats optimisation — Phase ${{ inputs.phase }} — $TIMESTAMP
+            git commit -m "🤖 [Actions] Optimisation Phase ${{ env.PHASE }} — $TIMESTAMP
 
-          Run #${{ github.run_number }} | Déclenché par : ${{ github.actor }}
-          Config : ${{ inputs.config_file }}
-          Top N  : ${{ inputs.save_top_n }} configs sauvegardées"
-
+          Run #${{ github.run_number }} | Lancé par : ${{ github.actor }}
+          Top ${{ env.TOP_N }} configs sauvegardées"
             git push origin HEAD:${{ github.ref_name }}
-            echo "✅ Résultats poussés sur la branche '${{ github.ref_name }}'"
-            echo "   → Récupérer avec : git pull"
+            echo "✅ Résultats pushés → git pull pour récupérer"
+            echo "pushed=true" >> $GITHUB_OUTPUT
           fi
+
+      # ── 📋 Résumé GitHub ──────────────────────────────────────────
+      - name: 📋 Résumé du run
+        if: always()
+        env:
+          BEST_CONFIG: ${{ steps.results.outputs.best_config_name }}
+          BEST_SHARPE: ${{ steps.results.outputs.best_sharpe }}
+          BEST_PF:     ${{ steps.results.outputs.best_pf }}
+          BEST_WR:     ${{ steps.results.outputs.best_wr }}
+          BEST_DD:     ${{ steps.results.outputs.best_dd }}
+          BEST_TRADES: ${{ steps.results.outputs.best_trades }}
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << SUMMARY
+          ## 🎯 BULLET-1 — Phase ${{ env.PHASE }} — Run #${{ github.run_number }}
+
+          | Paramètre | Valeur |
+          |-----------|--------|
+          | **Phase** | ${{ env.PHASE }} |
+          | **Config** | ${{ env.CONFIG_FILE }} |
+          | **Top N** | ${{ env.TOP_N }} |
+          | **Lancé par** | ${{ github.actor }} |
+          | **Statut** | ${{ job.status }} |
+
+          ### 🏆 Meilleure configuration
+
+          | Métrique | Valeur |
+          |----------|--------|
+          | Config | \`${BEST_CONFIG:-N/A}\` |
+          | Sharpe Ratio | ${BEST_SHARPE:-N/A} |
+          | Profit Factor | ${BEST_PF:-N/A} |
+          | Win Rate | ${BEST_WR:-N/A}% |
+          | Max Drawdown | ${BEST_DD:-N/A}% |
+          | Total Trades | ${BEST_TRADES:-N/A} |
+
+          ### 💾 Récupérer les résultats
+          \`\`\`bash
+          git pull
+          \`\`\`
+          SUMMARY
