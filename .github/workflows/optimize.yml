@@ -42,6 +42,10 @@ on:
           - "start_end"
           - "off"
 
+# Donne au GITHUB_TOKEN le droit d'écrire dans le repo (pour git push des résultats)
+permissions:
+  contents: write
+
 concurrency:
   group: bullet1-optimize-${{ github.ref }}
   cancel-in-progress: false
