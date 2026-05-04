@@ -1,0 +1,84 @@
+========================================================================
+BULLET-1 — RAPPORT D'OPTIMISATION
+========================================================================
+Généré le  : 2026-05-04 19:31 UTC
+Config     : /home/runner/work/BULLET-1_still-on-dev/BULLET-1_still-on-dev/config/_optim_phase_2c_tmp.json
+Période    : 2024-03-14 → 2024-04-23
+Total runs : 144 | Valides : 36
+========================================================================
+
+TOP 10 CONFIGURATIONS
+────────────────────────────────────────────────────────────────────────
+
+#01  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (profit_factor ) : +0.3570
+    Trades=  24 | WR=33.3% | PF=0.357 | Sharpe=N/A (insufficient_period (< 30d))
+    PnL=  -18.76 USDT | DD=21.18% | Sessions=4
+
+#02  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': True, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (profit_factor ) : +0.3570
+    Trades=  24 | WR=33.3% | PF=0.357 | Sharpe=N/A (insufficient_period (< 30d))
+    PnL=  -18.76 USDT | DD=21.18% | Sessions=4
+
+#03  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (profit_factor ) : +0.3316
+    Trades=  24 | WR=33.3% | PF=0.332 | Sharpe=N/A (insufficient_period (< 30d))
+    PnL=  -19.30 USDT | DD=21.10% | Sessions=4
+
+#04  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': True, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (profit_factor ) : +0.3316
+    Trades=  24 | WR=33.3% | PF=0.332 | Sharpe=N/A (insufficient_period (< 30d))
+    PnL=  -19.30 USDT | DD=21.10% | Sessions=4
+
+#05  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.5, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (sharpe_ratio  ) : -2.4637
+    Trades=  19 | WR=47.4% | PF=0.674 | Sharpe=-2.464
+    PnL=   -5.91 USDT | DD=9.44% | Sessions=4
+
+#06  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.5, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : -2.4925
+    Trades=  20 | WR=50.0% | PF=0.678 | Sharpe=-2.492
+    PnL=   -5.89 USDT | DD=10.71% | Sessions=4
+
+#07  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 3.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (sharpe_ratio  ) : -2.9711
+    Trades=  19 | WR=36.8% | PF=0.621 | Sharpe=-2.971
+    PnL=   -7.55 USDT | DD=10.81% | Sessions=4
+
+#08  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 3.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : -3.1708
+    Trades=  20 | WR=45.0% | PF=0.608 | Sharpe=-3.171
+    PnL=   -7.46 USDT | DD=10.13% | Sessions=4
+
+#09  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (sharpe_ratio  ) : -4.3073
+    Trades=  20 | WR=40.0% | PF=0.522 | Sharpe=-4.307
+    PnL=   -9.64 USDT | DD=12.57% | Sessions=4
+
+#10  7-reverse    | SL=1.5%  lev=20×  trail=hybrid  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : -5.1317
+    Trades=  20 | WR=40.0% | PF=0.460 | Sharpe=-5.132
+    PnL=  -10.78 USDT | DD=13.00% | Sessions=4
+
+
+========================================================================
+RÉSUMÉ PAR CONFIGURATION (meilleur score de chaque)
+────────────────────────────────────────────────────────────────────────
+  1-normal     | aucun résultat valide
+  2-normal     | aucun résultat valide
+  3-normal     | aucun résultat valide
+  4-normal     | aucun résultat valide
+  5-reverse    | aucun résultat valide
+  6-reverse    | aucun résultat valide
+  7-reverse    | score=+1.5084 | trades=   2 | PnL=  +0.87 | WR=50.0%
+  8-reverse    | aucun résultat valide

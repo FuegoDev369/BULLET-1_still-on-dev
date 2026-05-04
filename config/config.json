@@ -286,12 +286,12 @@
     }
   },
   "optimization": {
-    "_comment": "Grid search BULLET-1 — 3 phases indépendantes.\nPhase 2A : python optimize.py                          (432 runs ~86min)\nPhase 2B : python optimize.py --phase 2b              (243 runs ~49min)\nPhase 2C : python optimize.py --phase 2c              ( 72 runs ~14min)\nToutes   : python optimize.py --phase all              (747 runs ~149min)",
+    "_comment": "Grid search BULLET-1 \u2014 3 phases ind\u00e9pendantes.\nPhase 2A : python optimize.py                          (432 runs ~86min)\nPhase 2B : python optimize.py --phase 2b              (243 runs ~49min)\nPhase 2C : python optimize.py --phase 2c              ( 72 runs ~14min)\nToutes   : python optimize.py --phase all              (747 runs ~149min)",
     "strategy_configurations": [
       "7-reverse"
     ],
     "phase_2a": {
-      "_comment": "Params de base : stratégie, risque, levier",
+      "_comment": "Params de base : strat\u00e9gie, risque, levier",
       "parameters_to_optimize": [
         {
           "name": "stop_loss_offset_pct",
@@ -329,7 +329,7 @@
       ]
     },
     "phase_2b": {
-      "_comment": "Params indicateurs — ATR / Trend / UncertaintyCandle",
+      "_comment": "Params indicateurs \u2014 ATR / Trend / UncertaintyCandle",
       "parameters_to_optimize": [
         {
           "name": "detection.body_max_pct",
@@ -349,7 +349,7 @@
           "max": 21,
           "step": 7,
           "config_file": "config/atr_config.json",
-          "_comment": "Période ATR : 7 | 14 | 21"
+          "_comment": "P\u00e9riode ATR : 7 | 14 | 21"
         },
         {
           "name": "atr_parameters.base_multiplier",
@@ -367,7 +367,7 @@
           "max": 5,
           "step": 2,
           "config_file": "config/trend_config.json",
-          "_comment": "Périodes de calcul de la pente : 3 | 5"
+          "_comment": "P\u00e9riodes de calcul de la pente : 3 | 5"
         },
         {
           "name": "trend_detection.trend_strength_threshold",
@@ -383,7 +383,7 @@
       ]
     },
     "phase_2c": {
-      "_comment": "Toggles avancés avec skipping conditionnel.\nSkipping : volume.mode ignoré si volume.enabled=false,\n           allow_counter_trend ignoré si trend_filter=false,\n           stages ignorés si progressive_tightening=false.",
+      "_comment": "Toggles avanc\u00e9s avec skipping conditionnel.\nSkipping : volume.mode ignor\u00e9 si volume.enabled=false,\n           allow_counter_trend ignor\u00e9 si trend_filter=false,\n           stages ignor\u00e9s si progressive_tightening=false.",
       "parameters_to_optimize": [
         {
           "name": "strategy.signal_generator.breakout_detection_mode",
@@ -392,7 +392,7 @@
             "permissive",
             "strict"
           ],
-          "_comment": "Mode de détection des breakouts"
+          "_comment": "Mode de d\u00e9tection des breakouts"
         },
         {
           "name": "strategy.trend_filter.enabled",
@@ -401,7 +401,7 @@
             false,
             true
           ],
-          "_comment": "Filtre de tendance activé/désactivé"
+          "_comment": "Filtre de tendance activ\u00e9/d\u00e9sactiv\u00e9"
         },
         {
           "name": "strategy.trend_filter.allow_counter_trend",
@@ -414,7 +414,7 @@
             "param": "strategy.trend_filter.enabled",
             "value": true
           },
-          "_comment": "Contre-tendance — actif seulement si trend_filter.enabled=true"
+          "_comment": "Contre-tendance \u2014 actif seulement si trend_filter.enabled=true"
         },
         {
           "name": "strategy.volume_confirmation.enabled",
@@ -423,7 +423,7 @@
             false,
             true
           ],
-          "_comment": "Confirmation de volume activée/désactivée"
+          "_comment": "Confirmation de volume activ\u00e9e/d\u00e9sactiv\u00e9e"
         },
         {
           "name": "strategy.volume_confirmation.mode",
@@ -437,7 +437,7 @@
             "param": "strategy.volume_confirmation.enabled",
             "value": true
           },
-          "_comment": "Mode volume — actif seulement si volume.enabled=true"
+          "_comment": "Mode volume \u2014 actif seulement si volume.enabled=true"
         },
         {
           "name": "strategy.trailing_stop.atr_mode.base_multiplier",
@@ -485,7 +485,7 @@
         "max": 21,
         "step": 7,
         "config_file": "config/atr_config.json",
-        "_comment": "Période ATR : 7 | 14 | 21"
+        "_comment": "P\u00e9riode ATR : 7 | 14 | 21"
       },
       {
         "name": "atr_parameters.base_multiplier",
@@ -503,7 +503,7 @@
         "max": 5,
         "step": 2,
         "config_file": "config/trend_config.json",
-        "_comment": "Périodes de calcul de la pente : 3 | 5"
+        "_comment": "P\u00e9riodes de calcul de la pente : 3 | 5"
       },
       {
         "name": "trend_detection.trend_strength_threshold",
