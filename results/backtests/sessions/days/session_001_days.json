@@ -1,0 +1,109 @@
+{
+  "session_n": 1,
+  "saved_at": "2026-05-04 15:50:20",
+  "total_days": 10,
+  "timezone": "UTC",
+  "version": "2.2.2",
+  "days": [
+    {
+      "date": "2024-03-14 00:00:00",
+      "starting_balance": 100.0,
+      "ending_balance": 100.0,
+      "daily_pnl": 0.0,
+      "daily_pnl_pct": 0.0,
+      "trades_count": 0,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:17"
+    },
+    {
+      "date": "2024-03-15 00:00:00",
+      "starting_balance": 100.0,
+      "ending_balance": 97.86203060498758,
+      "daily_pnl": -2.1379693950124192,
+      "daily_pnl_pct": -2.1379693950124192,
+      "trades_count": 2,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:17"
+    },
+    {
+      "date": "2024-03-16 00:00:00",
+      "starting_balance": 97.86203060498758,
+      "ending_balance": 96.16259847504477,
+      "daily_pnl": -1.6994321299428066,
+      "daily_pnl_pct": -1.7365592349114758,
+      "trades_count": 4,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:17"
+    },
+    {
+      "date": "2024-03-17 00:00:00",
+      "starting_balance": 96.16259847504477,
+      "ending_balance": 95.1465296707226,
+      "daily_pnl": -1.016068804322174,
+      "daily_pnl_pct": -1.0566153789883856,
+      "trades_count": 1,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:18"
+    },
+    {
+      "date": "2024-03-18 00:00:00",
+      "starting_balance": 95.1465296707226,
+      "ending_balance": 97.18854053112885,
+      "daily_pnl": 2.0420108604062506,
+      "daily_pnl_pct": 2.1461748184333356,
+      "trades_count": 2,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:18"
+    },
+    {
+      "date": "2024-03-19 00:00:00",
+      "starting_balance": 97.18854053112885,
+      "ending_balance": 94.92980833648022,
+      "daily_pnl": -2.25873219464863,
+      "daily_pnl_pct": -2.324072552489018,
+      "trades_count": 6,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:18"
+    },
+    {
+      "date": "2024-03-20 00:00:00",
+      "starting_balance": 94.92980833648022,
+      "ending_balance": 97.23158389428146,
+      "daily_pnl": 2.3017755578012355,
+      "daily_pnl_pct": 2.4247131624268694,
+      "trades_count": 1,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:19"
+    },
+    {
+      "date": "2024-03-21 00:00:00",
+      "starting_balance": 97.23158389428146,
+      "ending_balance": 96.62917380939987,
+      "daily_pnl": -0.6024100848815834,
+      "daily_pnl_pct": -0.6195621430342794,
+      "trades_count": 1,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:19"
+    },
+    {
+      "date": "2024-03-22 00:00:00",
+      "starting_balance": 96.62917380939987,
+      "ending_balance": 95.46224707511671,
+      "daily_pnl": -1.166926734283166,
+      "daily_pnl_pct": -1.2076339766548327,
+      "trades_count": 5,
+      "end_reason": "midnight_transition",
+      "ended_at": "2026-05-04 15:50:19"
+    },
+    {
+      "date": "2024-03-23 00:00:00",
+      "starting_balance": 95.46224707511671,
+      "ending_balance": 93.57483163203827,
+      "daily_pnl": -1.8874154430784387,
+      "daily_pnl_pct": -1.9771328466564189,
+      "trades_count": 1,
+      "end_reason": "session_ended",
+      "ended_at": "2026-05-04 15:50:20"
+    }
+  ]
+}
