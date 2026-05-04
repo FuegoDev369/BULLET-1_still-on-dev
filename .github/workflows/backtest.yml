@@ -1,0 +1,345 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║         BULLET-1 — Backtest via GitHub Actions                  ║
+# ║                                                                  ║
+# ║  Déclencher : onglet Actions → Run workflow                     ║
+# ║                                                                  ║
+# ║  Secrets GitHub (Settings → Secrets → Actions) :                ║
+# ║    Telegram : TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID             ║
+# ║    Discord  : DISCORD_WEBHOOK_URL                               ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+name: 📊 BULLET-1 — Backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "Date début (YYYY-MM-DD)"
+        required: true
+        default: "2024-03-14"
+
+      end_date:
+        description: "Date fin (YYYY-MM-DD) — auto-corrigée si besoin"
+        required: true
+        default: "2024-04-23"
+
+      auto_fix_dates:
+        description: "Auto-corriger end_date si période incohérente"
+        required: false
+        type: choice
+        default: "true"
+        options:
+          - "true"
+          - "false"
+
+      config_file:
+        description: "Fichier de config (relatif à la racine)"
+        required: false
+        default: "config/config.json"
+
+      notifications:
+        description: "Niveau de notifications"
+        required: false
+        type: choice
+        default: "all"
+        options:
+          - "all"
+          - "start_end"
+          - "off"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bullet1-backtest-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  NOTIFY_MODE:         ${{ inputs.notifications }}
+  CONFIG_FILE:         ${{ inputs.config_file }}
+  START_DATE:          ${{ inputs.start_date }}
+  END_DATE:            ${{ inputs.end_date }}
+
+jobs:
+  backtest:
+    name: "Backtest ${{ inputs.start_date }} → ${{ inputs.end_date }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      # ── 1. Checkout + Git LFS ──────────────────────────────────────
+      - name: 📥 Checkout (+ Git LFS pour la DB)
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      # ── 2. Vérification DB ─────────────────────────────────────────
+      - name: 🗄️ Vérifier la base de données
+        run: |
+          if [ ! -f "data/bullet1_market_data.db" ]; then
+            echo "❌ data/bullet1_market_data.db introuvable !"
+            exit 1
+          fi
+          echo "✅ DB trouvée — $(du -sh data/bullet1_market_data.db | cut -f1)"
+
+      # ── 3. Python + dépendances ────────────────────────────────────
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 📦 Installer les dépendances
+        run: pip install --upgrade pip && pip install -r requirements.txt
+
+      # ── 4. Préparer les scripts ────────────────────────────────────
+      - name: 🔧 Préparer les scripts
+        run: |
+          chmod +x scripts/notify.sh
+          mkdir -p results/backtests/sessions
+
+      # ── 5. Injecter les dates dans config.json ─────────────────────
+      - name: ⚙️ Injecter les dates dans config.json
+        run: |
+          python3 - << 'EOF'
+          import json
+          cfg_path = "${{ env.CONFIG_FILE }}"
+          with open(cfg_path) as f:
+              cfg = json.load(f)
+          cfg["backtesting"]["start_date"] = "${{ env.START_DATE }}"
+          cfg["backtesting"]["end_date"]   = "${{ env.END_DATE }}"
+          with open(cfg_path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print(f"✅ Dates injectées : ${{ env.START_DATE }} → ${{ env.END_DATE }}")
+          EOF
+
+      # ── 6. Validation de la période (+ auto-fix si activé) ─────────
+      - name: 🔍 Valider la cohérence de la période
+        id: period_check
+        run: |
+          FIX_FLAG=""
+          if [ "${{ inputs.auto_fix_dates }}" = "true" ]; then
+            FIX_FLAG="--fix"
+          fi
+          python3 scripts/validate_backtest_period.py \
+            --config "${{ env.CONFIG_FILE }}" \
+            $FIX_FLAG
+
+      # ── 7. Afficher la période finale validée ──────────────────────
+      - name: 📅 Période validée
+        run: |
+          echo "════════════════════════════════════════════"
+          echo "  Début      : ${{ steps.period_check.outputs.start_date }}"
+          echo "  Fin        : ${{ steps.period_check.outputs.end_date }}"
+          echo "  Sessions   : ${{ steps.period_check.outputs.nb_sessions }}"
+          echo "  Durée tot. : ${{ steps.period_check.outputs.total_days }} jours"
+          if [ "${{ steps.period_check.outputs.was_corrected }}" = "true" ]; then
+            echo "  ⚠️  Date corrigée : ${{ steps.period_check.outputs.original_end }}"
+            echo "             → ${{ steps.period_check.outputs.end_date }}"
+          fi
+          echo "════════════════════════════════════════════"
+
+      # ── 8. 🔔 Notification : Démarrage ────────────────────────────
+      - name: 🔔 Notification — Démarrage backtest
+        if: env.NOTIFY_MODE != 'off'
+        run: |
+          NB_SESSIONS="${{ steps.period_check.outputs.nb_sessions }}"
+          START="${{ steps.period_check.outputs.start_date }}"
+          END="${{ steps.period_check.outputs.end_date }}"
+          CORRECTED="${{ steps.period_check.outputs.was_corrected }}"
+
+          # Message Telegram
+          CORR_NOTE=""
+          [ "$CORRECTED" = "true" ] && CORR_NOTE="
+          ⚠️ Date auto-corrigée : ${{ steps.period_check.outputs.original_end }} → ${END}"
+
+          TELEGRAM_MSG="📊 <b>BULLET-1 — Backtest démarré</b>
+
+          📅 <b>Période</b> : ${START} → ${END}${CORR_NOTE}
+          🔢 <b>Sessions</b> : ${NB_SESSIONS}
+          ⚙️ <b>Config</b> : ${{ env.CONFIG_FILE }}
+          👤 <b>Lancé par</b> : ${{ github.actor }}
+          🔢 <b>Run</b> : #${{ github.run_number }}
+          🕐 <b>Démarrage</b> : $(date '+%Y-%m-%d %H:%M UTC')
+
+          🔗 <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">Voir le run Actions</a>"
+
+          # Utiliser notify.sh pour Telegram
+          if [ -n "${TELEGRAM_BOT_TOKEN}" ] && [ -n "${TELEGRAM_CHAT_ID}" ]; then
+            curl -s -X POST \
+              "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+                \"text\": $(echo "$TELEGRAM_MSG" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),
+                \"parse_mode\": \"HTML\",
+                \"disable_web_page_preview\": true
+              }" > /dev/null && echo "  [Telegram] ✅ Envoyé"
+          fi
+
+          # Discord
+          if [ -n "${DISCORD_WEBHOOK_URL}" ]; then
+            curl -s -o /dev/null -w "  [Discord] HTTP %{http_code}\n" -X POST \
+              "${DISCORD_WEBHOOK_URL}" \
+              -H "Content-Type: application/json" \
+              -d "{\"embeds\":[{
+                \"title\": \"📊 Backtest démarré\",
+                \"description\": \"Période : **${START} → ${END}** | ${NB_SESSIONS} session(s)\",
+                \"color\": 3447003,
+                \"fields\": [
+                  {\"name\": \"👤 Lancé par\", \"value\": \"${{ github.actor }}\", \"inline\": true},
+                  {\"name\": \"🔢 Run\", \"value\": \"#${{ github.run_number }}\", \"inline\": true}
+                ],
+                \"footer\": {\"text\": \"BULLET-1 Trading Bot\"}
+              }]}"
+          fi
+
+      # ── 9. 🚀 LANCEMENT DU BACKTEST ───────────────────────────────
+      - name: 🚀 Lancer le backtest
+        id: backtest
+        run: |
+          echo "════════════════════════════════════════════"
+          echo "  BULLET-1 Backtest"
+          echo "  Période  : ${{ steps.period_check.outputs.start_date }} → ${{ steps.period_check.outputs.end_date }}"
+          echo "  Sessions : ${{ steps.period_check.outputs.nb_sessions }}"
+          echo "  Runner   : $(uname -m) | $(nproc) CPUs | $(free -h | awk '/^Mem:/{print $2}') RAM"
+          echo "  Démarrage: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "════════════════════════════════════════════"
+
+          python3 main.py backtest --config "${{ env.CONFIG_FILE }}"
+          EXIT_CODE=$?
+
+          echo ""
+          echo "════════════════════════════════════════════"
+          echo "  ✅ Terminé : $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "════════════════════════════════════════════"
+          exit $EXIT_CODE
+
+      # ── 10. 📊 Parser les résultats ───────────────────────────────
+      - name: 📊 Parser les résultats
+        id: results
+        if: always() && steps.backtest.outcome != 'skipped'
+        run: |
+          python3 scripts/parse_backtest_results.py \
+            --sessions-dir "results/backtests/sessions/" \
+            --config "${{ env.CONFIG_FILE }}" \
+            --write-summary "$GITHUB_STEP_SUMMARY"
+
+      # ── 11. 🔔 Notification : Résultats finaux ────────────────────
+      - name: 🔔 Notification — Résultats finaux
+        if: success() && env.NOTIFY_MODE != 'off'
+        env:
+          NB_SESSIONS:  ${{ steps.results.outputs.nb_sessions }}
+          TOTAL_TRADES: ${{ steps.results.outputs.total_trades }}
+          TOTAL_PNL:    ${{ steps.results.outputs.total_pnl_pct }}
+          AVG_WR:       ${{ steps.results.outputs.avg_win_rate }}
+          AVG_SHARPE:   ${{ steps.results.outputs.avg_sharpe }}
+          AVG_PF:       ${{ steps.results.outputs.avg_pf }}
+          AVG_DD:       ${{ steps.results.outputs.avg_drawdown }}
+          BEST_PNL:     ${{ steps.results.outputs.best_pnl }}
+          WORST_PNL:    ${{ steps.results.outputs.worst_pnl }}
+          START:        ${{ steps.period_check.outputs.start_date }}
+          END:          ${{ steps.period_check.outputs.end_date }}
+        run: |
+          TELEGRAM_MSG="🎯 <b>BULLET-1 — Backtest terminé !</b>
+
+          📅 <b>Période</b> : ${START} → ${END}
+          🔢 <b>Sessions</b> : ${NB_SESSIONS}
+
+          <b>── Métriques globales ──</b>
+          🔢 Total trades     : <b>${TOTAL_TRADES}</b>
+          💰 PnL total        : <b>${TOTAL_PNL}%</b>
+          🎯 Win Rate moy.    : <b>${AVG_WR}%</b>
+          📈 Sharpe moy.      : <b>${AVG_SHARPE}</b>
+          ⚖️  Profit Factor    : <b>${AVG_PF}</b>
+          📉 Drawdown moy.    : <b>${AVG_DD}%</b>
+          🏆 Meilleure session: <b>${BEST_PNL}%</b>
+          ⚠️  Pire session    : <b>${WORST_PNL}%</b>
+
+          💾 <b>Récupère tes résultats :</b>
+          <code>git pull</code>
+
+          🔗 <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">Voir le run complet</a>"
+
+          if [ -n "${TELEGRAM_BOT_TOKEN}" ] && [ -n "${TELEGRAM_CHAT_ID}" ]; then
+            curl -s -X POST \
+              "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+                \"text\": $(echo "$TELEGRAM_MSG" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),
+                \"parse_mode\": \"HTML\",
+                \"disable_web_page_preview\": true
+              }" > /dev/null && echo "  [Telegram] ✅ Résultats envoyés"
+          fi
+
+          if [ -n "${DISCORD_WEBHOOK_URL}" ]; then
+            curl -s -o /dev/null -w "  [Discord] HTTP %{http_code}\n" -X POST \
+              "${DISCORD_WEBHOOK_URL}" \
+              -H "Content-Type: application/json" \
+              -d "{\"embeds\":[{
+                \"title\": \"🎯 Backtest terminé — ${START} → ${END}\",
+                \"description\": \"${NB_SESSIONS} session(s) | **${TOTAL_TRADES}** trades | PnL **${TOTAL_PNL}%**\",
+                \"color\": 3066993,
+                \"fields\": [
+                  {\"name\": \"🎯 Win Rate\",       \"value\": \"**${AVG_WR}%**\",    \"inline\": true},
+                  {\"name\": \"📈 Sharpe\",          \"value\": \"**${AVG_SHARPE}**\", \"inline\": true},
+                  {\"name\": \"⚖️ Profit Factor\",   \"value\": \"**${AVG_PF}**\",     \"inline\": true},
+                  {\"name\": \"📉 Drawdown moy.\",   \"value\": \"**${AVG_DD}%**\",    \"inline\": true},
+                  {\"name\": \"🏆 Meilleure sess.\", \"value\": \"**${BEST_PNL}%**\",  \"inline\": true},
+                  {\"name\": \"💾 Récupérer\",       \"value\": \"\`git pull\`\",       \"inline\": false}
+                ],
+                \"footer\": {\"text\": \"BULLET-1 Trading Bot • GitHub Actions\"}
+              }]}"
+          fi
+
+      # ── 12. 🔔 Notification : Erreur ──────────────────────────────
+      - name: 🔔 Notification — Erreur
+        if: failure() && env.NOTIFY_MODE != 'off'
+        run: |
+          bash scripts/notify.sh error \
+            "backtest" \
+            "Consulter les logs du run GitHub Actions" \
+            "main.py backtest"
+
+      # ── 13. 📁 Upload Artifact (tous les rapports) ────────────────
+      - name: 📁 Upload Artifact — Rapports backtest
+        if: always() && steps.backtest.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "backtest-${{ steps.period_check.outputs.start_date }}-${{ steps.period_check.outputs.end_date }}-run${{ github.run_number }}"
+          path: |
+            results/backtests/sessions/
+          retention-days: 60
+          if-no-files-found: warn
+
+      # ── 14. 💾 Commit & Push des résultats ────────────────────────
+      - name: 💾 Commit & Push résultats
+        if: success()
+        run: |
+          git config user.name  "BULLET-1 Actions Bot"
+          git config user.email "bullet1-bot@github-actions"
+
+          git add results/backtests/ config/config.json 2>/dev/null || true
+
+          if git diff --staged --quiet; then
+            echo "ℹ️ Aucun changement à committer."
+          else
+            START="${{ steps.period_check.outputs.start_date }}"
+            END="${{ steps.period_check.outputs.end_date }}"
+            NB="${{ steps.period_check.outputs.nb_sessions }}"
+            TIMESTAMP=$(date '+%Y-%m-%d %H:%M UTC')
+
+            git commit -m "🤖 [Actions] Backtest ${START} → ${END} — $TIMESTAMP
+
+          Run #${{ github.run_number }} | Lancé par : ${{ github.actor }}
+          ${NB} session(s) | Config : ${{ env.CONFIG_FILE }}"
+
+            git push origin HEAD:${{ github.ref_name }}
+            echo "✅ Résultats pushés → git pull pour récupérer"
+          fi
