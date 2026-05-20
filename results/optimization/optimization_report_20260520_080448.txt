@@ -1,0 +1,74 @@
+========================================================================
+BULLET-1 — RAPPORT D'OPTIMISATION
+========================================================================
+Généré le  : 2026-05-20 08:04 UTC
+Config     : /home/runner/work/BULLET-1_still-on-dev/BULLET-1_still-on-dev/config/_optim_phase_2a_tmp.json
+Période    : 2024-05-01 → 2024-06-20
+Total runs : 432 | Valides : 252
+========================================================================
+
+TOP 10 CONFIGURATIONS
+────────────────────────────────────────────────────────────────────────
+
+#01  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.0613
+    Trades=  12 | WR=41.7% | PF=0.972 | Sharpe=-0.061
+    PnL=   -0.23 USDT | DD=3.82% | Sessions=5
+
+#02  7-reverse    | SL=0.5%  lev=10×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.0614
+    Trades=  12 | WR=41.7% | PF=0.979 | Sharpe=-0.061
+    PnL=   -0.09 USDT | DD=1.92% | Sessions=5
+
+#03  7-reverse    | SL=0.5%  lev=15×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.0614
+    Trades=  12 | WR=41.7% | PF=0.975 | Sharpe=-0.061
+    PnL=   -0.15 USDT | DD=2.87% | Sessions=5
+
+#04  5-reverse    | SL=0.5%  lev=10×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.4342
+    Trades=  13 | WR=38.5% | PF=0.899 | Sharpe=-0.434
+    PnL=   -0.43 USDT | DD=1.40% | Sessions=5
+
+#05  5-reverse    | SL=0.5%  lev=15×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.4345
+    Trades=  13 | WR=38.5% | PF=0.896 | Sharpe=-0.435
+    PnL=   -0.68 USDT | DD=2.09% | Sessions=5
+
+#06  5-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.4346
+    Trades=  13 | WR=38.5% | PF=0.893 | Sharpe=-0.435
+    PnL=   -0.93 USDT | DD=2.79% | Sessions=5
+
+#07  1-normal     | SL=0.5%  lev=15×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.7615
+    Trades=  15 | WR=33.3% | PF=0.854 | Sharpe=-0.762
+    PnL=   -1.28 USDT | DD=4.53% | Sessions=5
+
+#08  1-normal     | SL=0.5%  lev=20×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.7616
+    Trades=  15 | WR=33.3% | PF=0.851 | Sharpe=-0.762
+    PnL=   -1.74 USDT | DD=6.01% | Sessions=5
+
+#09  1-normal     | SL=0.5%  lev=10×  trail=atr  qual=20
+    Score (sharpe_ratio  ) : -0.7617
+    Trades=  15 | WR=33.3% | PF=0.858 | Sharpe=-0.762
+    PnL=   -0.83 USDT | DD=3.03% | Sessions=5
+
+#10  7-reverse    | SL=1.5%  lev=15×  trail=hybrid  qual=20
+    Score (sharpe_ratio  ) : -1.0031
+    Trades=  12 | WR=41.7% | PF=0.787 | Sharpe=-1.003
+    PnL=   -1.29 USDT | DD=3.37% | Sessions=5
+
+
+========================================================================
+RÉSUMÉ PAR CONFIGURATION (meilleur score de chaque)
+────────────────────────────────────────────────────────────────────────
+  1-normal     | score=-0.7615 | trades=  15 | PnL=  -1.28 | WR=33.3%
+  2-normal     | score=+2.6283 | trades=   3 | PnL=  +1.16 | WR=66.7%
+  3-normal     | score=+0.1693 | trades=   4 | PnL=  -2.32 | WR=25.0%
+  4-normal     | score=-14.7285 | trades=  12 | PnL= -18.21 | WR=8.3%
+  5-reverse    | score=+0.6635 | trades=   3 | PnL=  -0.47 | WR=33.3%
+  6-reverse    | score=+0.1945 | trades=   4 | PnL=  -3.03 | WR=25.0%
+  7-reverse    | score=-0.0613 | trades=  12 | PnL=  -0.23 | WR=41.7%
+  8-reverse    | score=-4.1197 | trades=  14 | PnL=  -5.09 | WR=21.4%
