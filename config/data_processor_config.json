@@ -1,0 +1,24 @@
+{
+  "general": {
+    "mode": "backtest",
+    "timeframe": "5m"
+  },
+
+  "chunking": {
+    "enabled": true,
+    "default_chunk_size": 10000,
+    "auto_chunk_threshold": 50000
+  },
+
+  "export_transformed_data_to_csv": {
+    "enabled": false,
+    "output_dir": "data/processed",
+    "compression": null,
+    "add_timestamp": true,
+    "validate_before_export": true
+  },
+
+  "memory_optimization": {
+    "gc_after_operations": true
+  }
+}

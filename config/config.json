@@ -37,7 +37,7 @@
     "target_capital_live": 1000.0
   },
   "position": {
-    "leverage": 20,
+    "leverage": 10,
     "margin_mode": "isolated",
     "collateral_percentage": 10.0,
     "max_simultaneous_positions": 1,
@@ -48,7 +48,7 @@
   },
   "risk_management": {
     "risk_reward_ratio": 2.0,
-    "stop_loss_offset_pct": 1.5,
+    "stop_loss_offset_pct": 0.8,
     "market_conditions": {
       "enable_market_validation": true,
       "max_spread_pct": 0.75,
@@ -62,8 +62,8 @@
   },
   "strategy": {
     "name": "uncertainty_candle_enhanced",
-    "configuration_name": "7-reverse",
-    "min_quality_score": 20,
+    "configuration_name": "8-reverse",
+    "min_quality_score": 30,
     "signal_generator": {
       "breakout_detection_mode": "permissive",
       "signal_side_reverser": {
@@ -72,8 +72,8 @@
     },
     "entry_logic": {
       "logic_direction": "reverse",
-      "for_short_case_comparison_operator": "<",
-      "for_long_case_comparison_operator": "<"
+      "for_short_case_comparison_operator": ">",
+      "for_long_case_comparison_operator": ">"
     },
     "trend_filter": {
       "enabled": false,
@@ -100,7 +100,7 @@
       }
     },
     "trailing_stop": {
-      "type": "hybrid",
+      "type": "atr",
       "candle_mode": {
         "use_previous_candle": true
       },
@@ -153,8 +153,8 @@
   },
   "backtesting": {
     "db_path": "data/bullet1_market_data.db",
-    "start_date": "2024-03-14",
-    "end_date": "2024-04-23",
+    "start_date": "2024-01-01",
+    "end_date": "2024-03-11",
     "simulation": {
       "maker_fee": 0.02,
       "taker_fee": 0.04,
@@ -286,12 +286,10 @@
     }
   },
   "optimization": {
-    "_comment": "Grid search BULLET-1 \u2014 3 phases ind\u00e9pendantes.\nPhase 2A : python optimize.py                          (432 runs ~86min)\nPhase 2B : python optimize.py --phase 2b              (243 runs ~49min)\nPhase 2C : python optimize.py --phase 2c              ( 72 runs ~14min)\nToutes   : python optimize.py --phase all              (747 runs ~149min)",
-    "strategy_configurations": [
-      "7-reverse"
-    ],
+    "_comment": "Grid search BULLET-1 — 3 phases indépendantes.\nPhase 2A : python optimize.py                          (432 runs ~86min)\nPhase 2B : python optimize.py --phase 2b              (243 runs ~49min)\nPhase 2C : python optimize.py --phase 2c              ( 72 runs ~14min)\nToutes   : python optimize.py --phase all              (747 runs ~149min)",
+    "strategy_configurations": null,
     "phase_2a": {
-      "_comment": "Params de base : strat\u00e9gie, risque, levier",
+      "_comment": "Params de base : stratégie, risque, levier",
       "parameters_to_optimize": [
         {
           "name": "stop_loss_offset_pct",
@@ -329,7 +327,7 @@
       ]
     },
     "phase_2b": {
-      "_comment": "Params indicateurs \u2014 ATR / Trend / UncertaintyCandle",
+      "_comment": "Params indicateurs — ATR / Trend / UncertaintyCandle",
       "parameters_to_optimize": [
         {
           "name": "detection.body_max_pct",
@@ -349,7 +347,7 @@
           "max": 21,
           "step": 7,
           "config_file": "config/atr_config.json",
-          "_comment": "P\u00e9riode ATR : 7 | 14 | 21"
+          "_comment": "Période ATR : 7 | 14 | 21"
         },
         {
           "name": "atr_parameters.base_multiplier",
@@ -367,7 +365,7 @@
           "max": 5,
           "step": 2,
           "config_file": "config/trend_config.json",
-          "_comment": "P\u00e9riodes de calcul de la pente : 3 | 5"
+          "_comment": "Périodes de calcul de la pente : 3 | 5"
         },
         {
           "name": "trend_detection.trend_strength_threshold",
@@ -383,7 +381,7 @@
       ]
     },
     "phase_2c": {
-      "_comment": "Toggles avanc\u00e9s avec skipping conditionnel.\nSkipping : volume.mode ignor\u00e9 si volume.enabled=false,\n           allow_counter_trend ignor\u00e9 si trend_filter=false,\n           stages ignor\u00e9s si progressive_tightening=false.",
+      "_comment": "Toggles avancés avec skipping conditionnel.\nSkipping : volume.mode ignoré si volume.enabled=false,\n           allow_counter_trend ignoré si trend_filter=false,\n           stages ignorés si progressive_tightening=false.",
       "parameters_to_optimize": [
         {
           "name": "strategy.signal_generator.breakout_detection_mode",
@@ -392,7 +390,7 @@
             "permissive",
             "strict"
           ],
-          "_comment": "Mode de d\u00e9tection des breakouts"
+          "_comment": "Mode de détection des breakouts"
         },
         {
           "name": "strategy.trend_filter.enabled",
@@ -401,7 +399,7 @@
             false,
             true
           ],
-          "_comment": "Filtre de tendance activ\u00e9/d\u00e9sactiv\u00e9"
+          "_comment": "Filtre de tendance activé/désactivé"
         },
         {
           "name": "strategy.trend_filter.allow_counter_trend",
@@ -414,7 +412,7 @@
             "param": "strategy.trend_filter.enabled",
             "value": true
           },
-          "_comment": "Contre-tendance \u2014 actif seulement si trend_filter.enabled=true"
+          "_comment": "Contre-tendance — actif seulement si trend_filter.enabled=true"
         },
         {
           "name": "strategy.volume_confirmation.enabled",
@@ -423,7 +421,7 @@
             false,
             true
           ],
-          "_comment": "Confirmation de volume activ\u00e9e/d\u00e9sactiv\u00e9e"
+          "_comment": "Confirmation de volume activée/désactivée"
         },
         {
           "name": "strategy.volume_confirmation.mode",
@@ -437,7 +435,7 @@
             "param": "strategy.volume_confirmation.enabled",
             "value": true
           },
-          "_comment": "Mode volume \u2014 actif seulement si volume.enabled=true"
+          "_comment": "Mode volume — actif seulement si volume.enabled=true"
         },
         {
           "name": "strategy.trailing_stop.atr_mode.base_multiplier",
@@ -465,82 +463,7 @@
     "output": {
       "results_path": "results/optimization/",
       "save_top_n_configs": 10
-    },
-    "parameters_to_optimize": [
-      {
-        "name": "strategy.signal_generator.breakout_detection_mode",
-        "type": "categorical",
-        "values": [
-          "permissive",
-          "strict"
-        ],
-        "_comment": "Mode de d\u00e9tection des breakouts"
-      },
-      {
-        "name": "strategy.trend_filter.enabled",
-        "type": "categorical",
-        "values": [
-          false,
-          true
-        ],
-        "_comment": "Filtre de tendance activ\u00e9/d\u00e9sactiv\u00e9"
-      },
-      {
-        "name": "strategy.trend_filter.allow_counter_trend",
-        "type": "categorical",
-        "values": [
-          false,
-          true
-        ],
-        "condition": {
-          "param": "strategy.trend_filter.enabled",
-          "value": true
-        },
-        "_comment": "Contre-tendance \u2014 actif seulement si trend_filter.enabled=true"
-      },
-      {
-        "name": "strategy.volume_confirmation.enabled",
-        "type": "categorical",
-        "values": [
-          false,
-          true
-        ],
-        "_comment": "Confirmation de volume activ\u00e9e/d\u00e9sactiv\u00e9e"
-      },
-      {
-        "name": "strategy.volume_confirmation.mode",
-        "type": "categorical",
-        "values": [
-          "basic",
-          "directional",
-          "advanced"
-        ],
-        "condition": {
-          "param": "strategy.volume_confirmation.enabled",
-          "value": true
-        },
-        "_comment": "Mode volume \u2014 actif seulement si volume.enabled=true"
-      },
-      {
-        "name": "strategy.trailing_stop.atr_mode.base_multiplier",
-        "type": "categorical",
-        "values": [
-          2.0,
-          2.5,
-          3.0
-        ],
-        "_comment": "Multiplicateur trailing stop ATR"
-      },
-      {
-        "name": "strategy.trailing_stop.atr_mode.progressive_tightening",
-        "type": "categorical",
-        "values": [
-          false,
-          true
-        ],
-        "_comment": "Serrage progressif du trailing stop"
-      }
-    ]
+    }
   },
   "performance_targets": {
     "backtest": {
@@ -607,13 +530,5 @@
     "save_debug_data": false,
     "hot_reload": false,
     "auto_restart_on_error": false
-  },
-  "_optimization_metadata": {
-    "optimized_at": "2026-05-04T19:31:27.476584+00:00",
-    "primary_score": 0.357006,
-    "primary_metric": "profit_factor",
-    "n_sessions": 4,
-    "total_trades": 24,
-    "external_overrides": {}
   }
 }
