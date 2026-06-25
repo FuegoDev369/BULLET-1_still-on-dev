@@ -1,0 +1,55 @@
+
+======================================================================
+BULLET-1 TRADING REPORT SUMMARY
+======================================================================
+
+Session:        a59e6976-4ad0-4f87-b229-3c7768c4baeb
+Session #:      5
+Strategy:       7-reverse
+Period:         2024-06-10 → 2024-06-20
+Mode:           BACKTEST
+Generated:      2026-06-25 15:37:35 UTC
+Initial Capital:       79.44 USDT
+Final Capital:         75.09 USDT
+
+──────────────────────────────────────────────────────────────────────
+OVERVIEW
+──────────────────────────────────────────────────────────────────────
+Total Trades:              10
+Winning Trades:             2
+Losing Trades:              8
+Win Rate:              20.00%
+
+──────────────────────────────────────────────────────────────────────
+PERFORMANCE
+──────────────────────────────────────────────────────────────────────
+Total PnL:                  -4.32 USDT
+Total Return:          -5.44%
+CAGR:                N/A (insufficient_data (< 30d))
+Profit Factor:             0.34
+Expectancy:                 -0.43 USDT/trade
+
+Avg Win:                     1.10 USDT
+Avg Loss:                    0.81 USDT
+Best Trade:                 +1.49 USDT
+Worst Trade:                -1.11 USDT
+
+──────────────────────────────────────────────────────────────────────
+RISK METRICS
+──────────────────────────────────────────────────────────────────────
+Sharpe Ratio:           0.00
+Sortino Ratio:          0.00
+Calmar Ratio:           0.00
+Max Drawdown:           7.18%
+Recovery Factor:       -0.74
+
+Max Consecutive Wins:       1
+Max Consecutive Losses:     5
+
+──────────────────────────────────────────────────────────────────────
+DIRECTIONAL STATS
+──────────────────────────────────────────────────────────────────────
+LONG  - Count:    3 | WR:   0.0% | PnL:      -2.36
+SHORT - Count:    7 | WR:  28.6% | PnL:      -1.96
+
+======================================================================
