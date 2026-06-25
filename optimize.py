@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BULLET-1 — Lancement de l'optimisation (Phase 2)
+BULLET-1 — Lancement de l'optimisation
 ==================================================
 
 Usage :
