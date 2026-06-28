@@ -1,0 +1,84 @@
+========================================================================
+BULLET-1 — RAPPORT D'OPTIMISATION
+========================================================================
+Généré le  : 2026-06-28 10:20 UTC
+Config     : /home/runner/work/BULLET-1_still-on-dev/BULLET-1_still-on-dev/config/_optim_phase_2c_tmp.json
+Période    : 2024-05-01 → 2024-06-20
+Total runs : 144 | Valides : 36
+========================================================================
+
+TOP 10 CONFIGURATIONS
+────────────────────────────────────────────────────────────────────────
+
+#01  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (sharpe_ratio  ) : +0.2780
+    Trades=  12 | WR=41.7% | PF=1.048 | Sharpe=0.278
+    PnL=   +0.39 USDT | DD=3.82% | Sessions=6
+
+#02  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : +0.2780
+    Trades=  12 | WR=41.7% | PF=1.048 | Sharpe=0.278
+    PnL=   +0.39 USDT | DD=3.82% | Sessions=6
+
+#03  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.5, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : +0.2780
+    Trades=  12 | WR=41.7% | PF=1.048 | Sharpe=0.278
+    PnL=   +0.39 USDT | DD=3.82% | Sessions=6
+
+#04  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 3.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : +0.2780
+    Trades=  12 | WR=41.7% | PF=1.048 | Sharpe=0.278
+    PnL=   +0.39 USDT | DD=3.82% | Sessions=6
+
+#05  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': True, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (sharpe_ratio  ) : +0.2780
+    Trades=  12 | WR=41.7% | PF=1.048 | Sharpe=0.278
+    PnL=   +0.39 USDT | DD=3.82% | Sessions=6
+
+#06  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': True, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : +0.2780
+    Trades=  12 | WR=41.7% | PF=1.048 | Sharpe=0.278
+    PnL=   +0.39 USDT | DD=3.82% | Sessions=6
+
+#07  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': True, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.5, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : +0.2780
+    Trades=  12 | WR=41.7% | PF=1.048 | Sharpe=0.278
+    PnL=   +0.39 USDT | DD=3.82% | Sessions=6
+
+#08  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': True, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 3.0, 'strategy.trailing_stop.atr_mode.progressive_tightening': True}
+    Score (sharpe_ratio  ) : +0.2780
+    Trades=  12 | WR=41.7% | PF=1.048 | Sharpe=0.278
+    PnL=   +0.39 USDT | DD=3.82% | Sessions=6
+
+#09  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': False, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.5, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (sharpe_ratio  ) : +0.1838
+    Trades=  12 | WR=41.7% | PF=1.027 | Sharpe=0.184
+    PnL=   +0.22 USDT | DD=3.82% | Sessions=6
+
+#10  7-reverse    | SL=0.5%  lev=20×  trail=atr  qual=20
+    Config overrides : {'strategy.signal_generator.breakout_detection_mode': 'permissive', 'strategy.trend_filter.enabled': True, 'strategy.trend_filter.allow_counter_trend': True, 'strategy.volume_confirmation.enabled': False, 'strategy.trailing_stop.atr_mode.base_multiplier': 2.5, 'strategy.trailing_stop.atr_mode.progressive_tightening': False}
+    Score (sharpe_ratio  ) : +0.1838
+    Trades=  12 | WR=41.7% | PF=1.027 | Sharpe=0.184
+    PnL=   +0.22 USDT | DD=3.82% | Sessions=6
+
+
+========================================================================
+RÉSUMÉ PAR CONFIGURATION (meilleur score de chaque)
+────────────────────────────────────────────────────────────────────────
+  1-normal     | aucun résultat valide
+  2-normal     | aucun résultat valide
+  3-normal     | aucun résultat valide
+  4-normal     | aucun résultat valide
+  5-reverse    | aucun résultat valide
+  6-reverse    | aucun résultat valide
+  7-reverse    | score=+0.2780 | trades=  12 | PnL=  +0.39 | WR=41.7%
+  8-reverse    | aucun résultat valide
