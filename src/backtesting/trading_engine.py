@@ -1494,18 +1494,31 @@ class TradingEngine:
 
     def _accumulate_funding_fees(self, current_time: datetime) -> None:
         """
-        [FIX-TE-2] Accumule les funding fees pour la position active.
+        [FIX-TE-2][FIX-TE-FUNDING-DIR] Accumule les funding fees pour la
+        position active.
 
         Réalité Binance perpetual futures :
         - Funding toutes les 8h : 00:00, 08:00, 16:00 UTC
-        - Frais = notional × funding_rate_8h
-        - Débiteur ou créditeur selon direction (simplifié : toujours débiteur ici)
+        - Frais = notional × funding_rate_8h × direction_multiplier
+        - Quand funding_rate_8h > 0 (cas dominant en marché haussier/neutre) :
+          les LONG paient et les SHORT reçoivent. Le multiplicateur de
+          direction restitue cette asymétrie au lieu de toujours débiter,
+          ce qui biaisait négativement toutes les positions SHORT
+          (audit Phase 2/8, MAJEUR M4 — la stratégie 7-reverse en génère).
 
         Détecte les timestamps UTC fixes traversés depuis le dernier check
         et accumule les frais correspondants via position_manager.add_funding_fee().
 
         Args:
-            current_time: Timestamp UTC de la candle courante
+            current_time: Timestamp UTC de la candle courante.
+
+        Note:
+            `funding_fee` reste un coût (signe négatif débité du solde) pour
+            un LONG quand funding_rate_8h > 0, et devient un gain (signe
+            positif crédité) pour un SHORT dans ce même cas — et inversement
+            si funding_rate_8h < 0. `position_manager.add_funding_fee()` et
+            `session_manager.update_balance()` acceptent déjà des montants
+            signés ; seul le signe transmis depuis ici doit être corrigé.
         """
         if self._active_position_id is None or self._last_funding_check is None:
             return
@@ -1528,12 +1541,22 @@ class TradingEngine:
                     funding_timestamps.append(ft)
             cursor += timedelta(days=1)
 
+        # [FIX-TE-FUNDING-DIR] LONG paie le funding (signe -1) quand le taux
+        # est positif ; SHORT reçoit (signe +1) dans ce même cas. La clé
+        # réelle du dict position est 'direction' (cf. L1336 ci-dessous,
+        # même fichier), pas 'side'.
+        direction_multiplier = -1.0 if position['direction'] == 'LONG' else 1.0
+
         for ft in funding_timestamps:
             notional = position.get('notional', 0.0)
             if notional <= 0:
                 continue
 
-            funding_fee = notional * self.order_simulator.funding_rate_8h
+            funding_fee = (
+                notional
+                * self.order_simulator.funding_rate_8h
+                * direction_multiplier
+            )
 
             try:
                 self.position_manager.add_funding_fee(
@@ -1541,11 +1564,12 @@ class TradingEngine:
                     funding_fee=funding_fee,
                     timestamp=ft,
                 )
-                # Déduire du capital (coût réel immédiat)
-                self.session_manager.update_balance(-funding_fee)
+                # Applique le delta réel (négatif = coût, positif = gain)
+                self.session_manager.update_balance(funding_fee)
 
                 self.logger.debug(
-                    f"Funding fee: {self._active_position_id}, "
+                    f"Funding fee: {self._active_position_id} "
+                    f"({position['direction']}), "
                     f"ts={ft.strftime('%Y-%m-%d %H:%M')}, "
                     f"fee={funding_fee:.4f} USDT"
                 )
@@ -1640,9 +1664,29 @@ class TradingEngine:
             )
 
     def _reset_session_state(self) -> None:
-        """Réinitialise l'état interne de session avant chaque run_session()."""
+        """Réinitialise l'état interne de session avant chaque run_session().
+
+        [FIX-TE-PENDING-LOG] Si un ordre différé (`_pending_order`) est encore
+        en attente au moment de la purge, cela signifie qu'un signal a été
+        généré sur la toute dernière bougie de la session précédente et n'a
+        jamais été exécuté (comportement correct, voir audit Phase 3 §3.2).
+        Un log INFO est désormais émis pour rendre ce cas diagnosticable
+        (auparavant silencieux, rendant difficile l'explication d'un trade
+        "manquant" en fin de session).
+        """
         self._active_position_id    = None
         self._active_trade_record   = None
+        # [FIX-TE-PENDING-LOG] Log informatif si un ordre différé est purgé —
+        # cas réel : signal généré sur la dernière bougie de session, jamais
+        # exécuté (audit Phase 3 §3.2, comportement correct mais auparavant
+        # silencieux, rendant le diagnostic difficile en cas de question sur
+        # un trade "manquant" en fin de session).
+        if self._pending_order is not None:
+            self.logger.info(
+                f"[FIX-TE-PENDING-LOG] Ordre différé purgé en fin de session "
+                f"(jamais exécuté) : {self._pending_order.get('direction', '?')} "
+                f"signal_close={self._pending_order.get('entry_price', '?')}"
+            )
         self._pending_order         = None   # [FIX-LAB-1] Ordre différé éventuel annulé entre sessions
         self._last_funding_check    = None
         self._last_candle_timestamp = None

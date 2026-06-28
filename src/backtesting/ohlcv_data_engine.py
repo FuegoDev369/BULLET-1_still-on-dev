@@ -7,9 +7,15 @@ Pipeline de données OHLCV pour backtesting.
 Rôle unique : orchestrer le chargement, la validation et le traitement LIGHT
 des données de marché, puis retourner un DataFrame prêt pour la simulation.
 
-Version: 2.3.0
+Version: 2.3.1
 Module:  src/backtesting/ohlcv_data_engine.py
 Author:  FuegoDev
+
+Changements v2.3.1 :
+    - [FIX-ODE-DEDUP-TF] Suppression de _timeframe_to_minutes(), dupliquée
+      avec engine._parse_timeframe_minutes(). Utilise désormais
+      src.utils.helpers.parse_timeframe_to_minutes() comme source de
+      vérité unique (audit Phase 4/8, MINEUR m7).
 
 Changements v2.3.0 :
     - [DB-MIGRATION] Hash SHA-256 fichier CSV → empreinte DB (get_db_fingerprint)
@@ -34,7 +40,11 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from src.utils.logger  import BulletLogger
-from src.utils.helpers import ensure_directory, get_project_root
+from src.utils.helpers import (
+    ensure_directory,
+    get_project_root,
+    parse_timeframe_to_minutes,  # [FIX-ODE-DEDUP-TF] source de vérité unique
+)
 from src.data.data_loader    import DataLoader
 from src.data.data_validator import DataValidator
 from src.data.data_processor import DataProcessor
@@ -70,34 +80,6 @@ def _read_pipeline_flags(config: dict) -> tuple[bool, bool]:
     validator_enabled = ode_cfg.get("data_validator", {}).get("enabled", True)
     processor_enabled = ode_cfg.get("data_processor", {}).get("enabled", True)
     return bool(validator_enabled), bool(processor_enabled)
-
-
-def _timeframe_to_minutes(timeframe: str) -> int:
-    """
-    Convertit un timeframe string en minutes entier.
-
-    Utilisé par OHLCVDataEngine._compute_warmup_start_date() pour calculer
-    le delta de chargement anticipé (warmup).
-
-    Returns 0 si le format est inconnu (warmup désactivé silencieusement).
-    """
-    tf = timeframe.strip().lower()
-    _KNOWN: dict = {
-        '1m': 1,   '3m': 3,   '5m': 5,   '10m': 10,  '15m': 15,
-        '30m': 30, '45m': 45,
-        '1h': 60,  '2h': 120, '3h': 180, '4h': 240,  '6h': 360,
-        '8h': 480, '12h': 720,
-        '1d': 1440, '3d': 4320, '1w': 10080,
-    }
-    if tf in _KNOWN:
-        return _KNOWN[tf]
-    for suffix, factor in (('m', 1), ('h', 60), ('d', 1440), ('w', 10080)):
-        if tf.endswith(suffix):
-            try:
-                return int(tf[:-len(suffix)]) * factor
-            except ValueError:
-                pass
-    return 0
 
 
 class OHLCVDataEngine:
@@ -355,7 +337,7 @@ class OHLCVDataEngine:
             return None
 
         tf_str     = self.config.get('general', {}).get('timeframe', '')
-        tf_minutes = _timeframe_to_minutes(tf_str)
+        tf_minutes = parse_timeframe_to_minutes(tf_str)  # [FIX-ODE-DEDUP-TF]
         if tf_minutes <= 0:
             self.logger.warning(
                 f"[WARMUP-FIX] Timeframe '{tf_str}' inconnu — "

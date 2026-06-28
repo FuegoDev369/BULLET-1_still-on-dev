@@ -44,6 +44,7 @@ _TRADING_DAYS_PER_YEAR: int      = 365   # Crypto 24/7
 _HOURS_PER_YEAR: int             = 8760  # 365 × 24
 _JSON_INF_SENTINEL: float        = 999.0 # Remplace float('inf') en JSON
 _CAGR_MIN_DAYS: int              = 30    # Durée minimale pour un CAGR significatif
+_EPSILON: float                  = 1e-10 # [FIX-MET-EPS] Tolérance std/downside_dev≈0 — np.std(ddof=1) sur returns identiques retourne ~1e-18 (artefact float64), jamais exactement 0.0 — guard == 0 ne se déclenche jamais dans ce cas
 
 # Seuil minimum trades pour que les ratios soient statistiquement valides
 _MIN_TRADES_FOR_RATIOS: int = 5
@@ -460,7 +461,7 @@ class Metrics:
 
         mean_r = float(np.mean(returns))
         std_r  = float(np.std(returns, ddof=1))
-        if std_r == 0:
+        if std_r < _EPSILON:    # [FIX-MET-EPS] était : if std_r == 0 — jamais vrai en float64 (np.std retourne ~1e-18 sur returns identiques, pas 0.0 exact)
             return 0.0
 
         rf         = _rf_per_period(self.risk_free_rate, period)
@@ -523,7 +524,7 @@ class Metrics:
         downside_sq  = np.minimum(returns - target_return, 0.0) ** 2
         downside_dev = math.sqrt(float(np.mean(downside_sq)))
 
-        if downside_dev == 0:
+        if downside_dev < _EPSILON:   # [FIX-MET-EPS] était : if downside_dev == 0 — idem Sharpe, artefact float64 empêche d'atteindre exactement 0.0
             return float('inf') if mean_r > target_return else 0.0
 
         rf          = _rf_per_period(self.risk_free_rate, period)
@@ -1033,7 +1034,6 @@ class Metrics:
 
         return results
 
-    @staticmethod
     @staticmethod
     def _make_empty_metrics(initial_capital: float = 0.0) -> Dict[str, Any]:
         """

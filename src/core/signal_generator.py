@@ -43,6 +43,14 @@ from src.indicators.trend import TrendIndicator
 # CONSTANTES
 # ============================================================================
 
+# [FIX-SG-NOMENCLATURE] Clarification — 'reverse' n'est PAS un mode contrarian
+# au sens du jargon marché standard. C'est l'inverse de la logique de
+# 'normal' (qui fade le breakout), donc 'reverse' SUIT le breakout
+# (trend-following / momentum). Un futur lecteur du code ne doit pas
+# présumer le sens inverse en lisant uniquement le nom du mode :
+#   normal  : breakout UP → SHORT (fade) | breakout DOWN → LONG (fade)
+#   reverse : breakout UP → LONG (suit)  | breakout DOWN → SHORT (suit)
+# Voir _determine_signal_type() pour l'implémentation de cette logique.
 _VALID_LOGIC_DIRECTIONS: frozenset = frozenset({'normal', 'reverse'})
 _VALID_EXPORT_FORMATS: frozenset = frozenset({'json', 'csv'})
 _VALID_SIGNAL_SIDES: frozenset = frozenset({'LONG', 'SHORT', 'NONE'})
@@ -118,6 +126,14 @@ class SignalGenerator:
         Raises:
             ValueError: Si logic_direction n'est pas 'normal' ou 'reverse'.
             ModeIncoherenceError: Si les modes entre fichiers config diffèrent.
+
+        Note:
+            [FIX-SG-NOMENCLATURE] `entry_logic.logic_direction` ('normal' /
+            'reverse') ne désigne PAS une logique contrarian au sens du
+            jargon marché standard. 'normal' fade le breakout (contrarian),
+            'reverse' suit le breakout (trend-following / momentum). Voir
+            le commentaire sur `_VALID_LOGIC_DIRECTIONS` et
+            `_determine_signal_type()` pour le détail.
         """
         self.logger = BulletLogger()
         self.config = config
@@ -352,7 +368,7 @@ class SignalGenerator:
             breakout_info['breakout_type'], trend, cached_metrics, volume_level2_confirmed
         )
 
-        entry_price: float = self._determine_entry_price(signal_type, current_candle)
+        entry_price: float = self._get_signal_reference_price(signal_type, current_candle)
 
         with self._lock:
             if signal_type == 'LONG':
@@ -412,7 +428,16 @@ class SignalGenerator:
         return {'high_broken': high_broken, 'low_broken': low_broken, 'breakout_type': breakout_type}
 
     def _determine_signal_type(self, breakout_info: Dict[str, Any]) -> Optional[Tuple[str, str]]:
-        """Applique la logique normal/reverse."""
+        """
+        Applique la logique normal/reverse.
+
+        [FIX-SG-NOMENCLATURE] 'reverse' n'est PAS un mode contrarian au sens
+        du jargon marché standard — c'est l'inverse de 'normal' (qui fade le
+        breakout), donc 'reverse' SUIT le breakout (trend-following /
+        momentum) :
+            normal  : breakout UP → SHORT (fade) | breakout DOWN → LONG (fade)
+            reverse : breakout UP → LONG (suit)  | breakout DOWN → SHORT (suit)
+        """
         breakout_type = breakout_info['breakout_type']
         if breakout_type is None or breakout_type == 'BOTH':
             return None
@@ -570,11 +595,59 @@ class SignalGenerator:
         return (False, {'mode': 'invalid', 'rejection_reason': f'invalid_mode_{mode}'})
 
     def _validate_trend_alignment(self, signal_type: str, trend: Optional[str]) -> bool:
-        """Valide l'alignement signal/tendance."""
+        """Valide l'alignement signal/tendance.
+
+        Distingue deux cas qui étaient auparavant traités identiquement :
+
+        - ``trend in {'neutral', 'unknown', 'sideways'}`` : tendance **explicitement
+          calculée comme neutre** — le signal est autorisé à passer (comportement
+          inchangé). Ces valeurs signifient que l'analyse s'est bien exécutée mais
+          n'a pas identifié de direction nette.
+
+        - ``trend is None`` : le calcul de tendance **n'a pas pu aboutir**
+          (ex. : insuffisamment de bougies au démarrage d'une session pour que
+          les moyennes mobiles soient stables, ou colonne ``'trend'`` absente/NaN
+          dans le DataFrame). Laisser passer un signal dans ce cas revient à
+          désactiver silencieusement le filtre — comportement incohérent pour un
+          opérateur qui a explicitement activé ``trend_filter_enabled=True``.
+          Le choix conservateur (rejeter) est donc appliqué, avec un log ``WARNING``
+          pour la traçabilité.
+
+        Note:
+            Ce code n'est **pas atteint** en configuration active, car
+            ``trend_filter_enabled=False`` court-circuite l'appel à L332 de
+            ``generate_signal()``. Le fix est un garde-fou différé, activé dès
+            qu'un opérateur bascule le filtre à ``True``.
+
+        Args:
+            signal_type: Direction du signal (``'LONG'`` ou ``'SHORT'``).
+            trend: Valeur de tendance calculée par ``TrendAnalyzer``, ou ``None``
+                si le calcul a échoué / la colonne est absente.
+
+        Returns:
+            ``True`` si le signal est aligné avec la tendance ou si le filtre
+            autorise le contre-tendance. ``False`` pour rejeter.
+        """
+        # [FIX-SG-TREND-NONE v3.0.0] allow_counter_trend court-circuite tout
         if self.allow_counter_trend:
             return True
-        if trend is None or trend in {'neutral', 'unknown', 'sideways'}:
+
+        # [FIX-SG-TREND-NONE] trend=None : calcul de tendance inopérant
+        # → rejeter le signal conservativement (filtre actif = donnée requise)
+        if trend is None:
+            self.logger.warning(
+                "[FIX-SG-TREND-NONE] trend_filter activé mais trend=None "
+                "(données insuffisantes ou colonne absente) — signal rejeté "
+                "par précaution. Désactivez trend_filter si ce rejet est "
+                "indésirable en début de session."
+            )
+            return False
+
+        # Tendance explicitement neutre : signal autorisé (comportement inchangé)
+        if trend in {'neutral', 'unknown', 'sideways'}:
             return True
+
+        # Validation directionnelle stricte
         if signal_type == 'LONG' and trend == 'bullish':
             return True
         if signal_type == 'SHORT' and trend == 'bearish':
@@ -638,8 +711,38 @@ class SignalGenerator:
 
         return min(100, round(int(score)))
 
-    def _determine_entry_price(self, signal_type: str, current_candle: dict) -> float:
-        """Détermine le prix d'entrée."""
+    def _get_signal_reference_price(self, signal_type: str, current_candle: dict) -> float:
+        """Retourne le close de la bougie signal comme prix de référence.
+
+        [FIX-SG-STUB-DOC] Renommée depuis `_determine_entry_price()` — l'ancien
+        nom suggérait une logique conditionnelle sur `signal_type` qui n'existe
+        pas : la fonction retourne toujours `current_candle['close']`, quelle
+        que soit la direction du signal.
+
+        Ne pas confondre avec le `fill_price` réel : ce prix de référence sert
+        uniquement à `RiskManager.calculate_sl_tp()` pour le calcul SL/TP
+        initial au moment du signal. L'exécution effective a lieu au `open`
+        de la bougie suivante via `TradingEngine._execute_pending_order()`
+        (look-ahead bias, FIX-LAB-1), et SL/TP sont ensuite recalculés sur le
+        `fill_price` réel post-slippage dans
+        `TradingEngine._build_position_data()` (FIX-TE-2).
+
+        `signal_type` n'est pas utilisé dans le calcul actuel — le prix de
+        référence est toujours le close de la bougie signal, indépendamment
+        de la direction. Le paramètre est conservé pour compatibilité de
+        signature avec d'éventuelles futures variantes (ex: prix de référence
+        différent pour LONG vs SHORT en cas d'ordre LIMIT natif).
+
+        Args:
+            signal_type: Direction du signal ('LONG' ou 'SHORT'). Non utilisé
+                dans l'implémentation actuelle (voir docstring ci-dessus).
+            current_candle: Dict de la bougie signal courante, doit contenir
+                la clé 'close'.
+
+        Returns:
+            float: Le prix de close de la bougie signal, utilisé comme
+                référence pour le calcul SL/TP initial.
+        """
         return current_candle['close']
 
     def export_signals(

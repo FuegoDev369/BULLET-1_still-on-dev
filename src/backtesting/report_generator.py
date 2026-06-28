@@ -43,7 +43,7 @@ from src.utils.helpers import (
     ensure_directory,
     format_datetime
 )
-from src.backtesting.metrics import Metrics
+from src.backtesting.metrics import Metrics, _JSON_INF_SENTINEL  # [FIX-RG-INF-DOC] import sentinelle JSON
 
 
 # ============================================================================
@@ -356,6 +356,16 @@ class ReportGenerator:
             },
             'mode':          self.mode,
             'generated_at':  datetime.now(tz=timezone.utc).isoformat(),
+            # [FIX-RG-INF-DOC] Annotation explicite : JSON ne supporte pas
+            # Infinity nativement, donc tout float('inf') (ex: profit_factor
+            # sans perte) est remplacé par cette valeur sentinelle. Les
+            # rapports HTML/Markdown/Text affichent déjà '∞' pour la même
+            # donnée — seul le JSON brut a besoin de cette note pour un
+            # consommateur externe (audit Phase 8, mineur m5).
+            'json_sentinel_note': (
+                f"Toute valeur égale à {_JSON_INF_SENTINEL} dans 'metrics' "
+                f"représente float('inf') (ex: aucune perte sur la période)."
+            ),
             'metrics':       results
         }
 

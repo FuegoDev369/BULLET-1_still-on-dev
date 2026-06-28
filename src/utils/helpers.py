@@ -71,41 +71,6 @@ class ModeInconsistencyError(ValueError):
 
 
 # ============================================================================
-# CONSTANTES GLOBALES
-# ============================================================================
-
-# Modes d'exécution valides pour tout le système BULLET-1.
-# Utilisé par verify_mode_consistency() et les modules indicateurs.
-VALID_MODES: frozenset = frozenset({'backtest', 'paper', 'live'})
-
-
-# ============================================================================
-# EXCEPTIONS DÉDIÉES — VALIDATION DES MODES
-# ============================================================================
-
-class ModeMissingError(ValueError):
-    """
-    Levée quand la clé 'mode' est absente d'un fichier de configuration.
-    Hérite de ValueError pour compatibilité avec les blocs except existants.
-    """
-
-
-class ModeInvalidError(ValueError):
-    """
-    Levée quand la valeur de 'mode' n'est pas dans VALID_MODES.
-    Hérite de ValueError pour compatibilité avec les blocs except existants.
-    """
-
-
-class ModeInconsistencyError(ValueError):
-    """
-    Levée quand le mode d'un fichier de config de module diffère du mode
-    défini dans config/config.json.
-    Hérite de ValueError pour compatibilité avec les blocs except existants.
-    """
-
-
-# ============================================================================
 # CONVERSIONS DATES & TIMESTAMPS
 # ============================================================================
 
@@ -251,6 +216,55 @@ def str_to_datetime(date_str: str, fmt: str = "%Y-%m-%d %H:%M:%S",
         dt = dt.replace(tzinfo=timezone.utc)
     
     return dt
+
+
+def parse_timeframe_to_minutes(timeframe: str) -> int:
+    """
+    Convertit un timeframe string en minutes entier.
+
+    [v2.4.1 — FIX-DEDUP-TF] Source de vérité unique — remplace les
+    implémentations dupliquées historiquement dans
+    src/backtesting/engine.py (_parse_timeframe_minutes) et
+    src/backtesting/ohlcv_data_engine.py (_timeframe_to_minutes),
+    strictement identiques. La justification initiale de la duplication
+    (risque d'import circulaire engine.py <-> ohlcv_data_engine.py) a été
+    vérifiée inexistante : ohlcv_data_engine.py n'importe rien de
+    engine.py. helpers.py n'a de dépendance ni vers l'un ni vers l'autre
+    (module fondamental niveau 0), c'est donc l'emplacement neutre
+    approprié.
+
+    Ne pas confondre avec parse_timeframe() ci-dessous : cette dernière
+    retourne des SECONDES, est case-sensitive ('m' vs 'M' pour minute vs
+    mois) et lève ValueError sur un format invalide. parse_timeframe_to_minutes()
+    retourne des MINUTES, est case-insensitive, et dégrade silencieusement
+    sur un format inconnu (retourne 0) — comportement requis par les
+    appelants historiques (warmup désactivé silencieusement plutôt qu'une
+    exception en pleine boucle de backtest).
+
+    Args:
+        timeframe: Format '1m', '5m', '15m', '1h', '4h', '1d', '1w', etc.
+
+    Returns:
+        int: Nombre de minutes. 0 si le format est inconnu (dégradation
+            silencieuse — warmup désactivé plutôt qu'une exception).
+    """
+    tf = timeframe.strip().lower()
+    _KNOWN: Dict[str, int] = {
+        '1m': 1, '3m': 3, '5m': 5, '10m': 10, '15m': 15,
+        '30m': 30, '45m': 45,
+        '1h': 60, '2h': 120, '3h': 180, '4h': 240, '6h': 360,
+        '8h': 480, '12h': 720,
+        '1d': 1440, '3d': 4320, '1w': 10080,
+    }
+    if tf in _KNOWN:
+        return _KNOWN[tf]
+    for suffix, factor in (('m', 1), ('h', 60), ('d', 1440), ('w', 10080)):
+        if tf.endswith(suffix):
+            try:
+                return int(tf[:-len(suffix)]) * factor
+            except ValueError:
+                pass
+    return 0   # Format inconnu → dégradation silencieuse (warmup désactivé)
 
 
 def parse_timeframe(timeframe: str, strict: bool = False) -> int:

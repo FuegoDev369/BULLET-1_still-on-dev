@@ -16,11 +16,21 @@ Fonctionnalités :
 - Thread-safe (RLock)
 - Support backtest + paper
 
-Version: 2.6.8
-Date: 2026-03-13
+Version: 2.6.9
+Date: 2026-06-27
 Author: FuegoDev
 Mode: ✅ Backtest | ✅ Paper | ❌ Live
 Dépendances: logger.py, helpers.py, atr.py, session_manager.py
+
+Changelog:
+    v2.6.9 — 2026-06-27
+        [FIX-OS-ATR] Nouveau paramètre optionnel atr_indicator au constructeur.
+            _compute_volatility_from_atr() délègue à l'instance ATRIndicator
+            injectée (partagée avec RiskManager/PositionManager) au lieu de
+            recalculer un ATR indépendant via calculate_atr_simple(period=14).
+            Fallback inchangé si atr_indicator=None. Corrige le slippage
+            dynamique incohérent avec le reste du système (audit Phase 4/8,
+            MAJEUR M3).
 """
 
 import csv
@@ -59,6 +69,7 @@ from src.indicators.atr import (
     calculate_atr_simple,
     ATR_DEFAULT_PERIOD,
     ATR_DEFAULT_METHOD,
+    ATRIndicator,
 )
 
 
@@ -266,6 +277,7 @@ class OrderSimulator:
         mode: str = 'backtest',
         config: Optional[dict] = None,
         random_seed: Optional[int] = None,
+        atr_indicator: Optional[ATRIndicator] = None,
     ):
         """
         Initialise le simulateur d'ordres.
@@ -286,6 +298,15 @@ class OrderSimulator:
             random_seed:     Seed optionnel pour reproductibilité totale du backtest.
                              [v2.6.1 — FIX OS-2] Utilise un Random isolé (self._rng)
                              pour ne pas polluer le PRNG global du process.
+            atr_indicator:   Instance ATRIndicator partagée, injectée par engine.py
+                             (même instance que RiskManager/PositionManager).
+                             [v2.6.9 — FIX-OS-ATR] Si fournie, _compute_volatility_from_atr()
+                             l'utilise au lieu de recalculer un ATR indépendant via
+                             calculate_atr_simple(), garantissant un slippage dynamique
+                             cohérent avec le reste du système (audit Phase 4/8, MAJEUR M3).
+                             Si None (ex: trailing_stop.type='fixed') → fallback
+                             automatique sur calculate_atr_simple(period=14),
+                             comportement identique aux versions précédentes.
 
         Raises:
             ValueError: Si mode invalide.
@@ -329,6 +350,12 @@ class OrderSimulator:
 
         # Injection dépendance
         self.session_manager: ICapitalProvider = session_manager
+
+        # [v2.6.9 — FIX-OS-ATR] Instance ATRIndicator partagée (optionnelle).
+        # Si fournie : _compute_volatility_from_atr() délègue le calcul à
+        # cette instance au lieu de calculate_atr_simple() — cohérence
+        # garantie avec RiskManager/PositionManager (audit Phase 4/8, MAJEUR M3).
+        self._atr_indicator: Optional[ATRIndicator] = atr_indicator
 
         # Logger
         self.logger = BulletLogger()
@@ -387,7 +414,8 @@ class OrderSimulator:
         self.logger.info(
             f"OrderSimulator initialized "
             f"(mode: {mode}, capital_provider: {type(session_manager).__name__}, "
-            f"seed={'set' if random_seed is not None else 'unset'})"
+            f"seed={'set' if random_seed is not None else 'unset'}, "
+            f"atr_indicator={'injected' if self._atr_indicator is not None else 'none'})"
         )
 
     # ========================================================================
@@ -973,13 +1001,18 @@ class OrderSimulator:
         current_price: float
     ) -> float:
         """
-        Calcule la volatilité normalisée via atr.calculate_atr_simple().
+        Calcule la volatilité normalisée à partir de l'ATR.
 
-        Délègue entièrement le calcul ATR à atr.py pour garantir la
-        cohérence avec risk_manager, position_manager et strategy.
+        [v2.6.9 — FIX-OS-ATR] Délègue en priorité à l'instance ATRIndicator
+        injectée (self._atr_indicator), partagée avec RiskManager et
+        PositionManager, pour garantir un slippage dynamique cohérent avec
+        le reste du système (audit Phase 4/8, MAJEUR M3). Si aucune instance
+        n'est injectée (trailing_stop.type='fixed' par exemple), fallback
+        sur atr.calculate_atr_simple(period=ATR_DEFAULT_PERIOD) — comportement
+        identique aux versions précédentes.
 
         Formule:
-            volatility = ATR(ATR_DEFAULT_PERIOD, ATR_DEFAULT_METHOD) / current_price
+            volatility = ATR(period, method) / current_price
 
         Args:
             historical_data: DataFrame OHLCV (colonnes: high, low, close)
@@ -991,18 +1024,23 @@ class OrderSimulator:
                    Retourne _VOLATILITY_FALLBACK si données insuffisantes.
         """
         try:
-            atr_series = calculate_atr_simple(
-                historical_data,
-                period=ATR_DEFAULT_PERIOD,
-                method=ATR_DEFAULT_METHOD
-            )
+            if self._atr_indicator is not None:
+                # Source de vérité unique : même instance que RiskManager/
+                # PositionManager — même période, même méthode de smoothing.
+                atr_series = self._atr_indicator.calculate_atr(historical_data)
+            else:
+                atr_series = calculate_atr_simple(
+                    historical_data,
+                    period=ATR_DEFAULT_PERIOD,
+                    method=ATR_DEFAULT_METHOD
+                )
 
             atr_value = atr_series.iloc[-1]
 
             if pd.isna(atr_value) or atr_value <= 0:
                 self.logger.debug(
                     f"ATR NaN ou nul (len={len(historical_data)}, "
-                    f"period={ATR_DEFAULT_PERIOD}), "
+                    f"source={'ATRIndicator' if self._atr_indicator is not None else 'calculate_atr_simple'}), "
                     f"fallback volatilité: {_VOLATILITY_FALLBACK}"
                 )
                 return _VOLATILITY_FALLBACK

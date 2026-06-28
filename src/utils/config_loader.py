@@ -33,6 +33,9 @@ from src.utils.helpers import (
     get_project_root
 )
 from src.utils.logger import BulletLogger
+# [FIX-UTILS-VERSION-1] Source de vérité unique pour la version runtime —
+# résout l'incohérence interne (header v2.3.6 vs message d'erreur "v2.3.3").
+from src.__version__ import __version__ as _RUNTIME_VERSION
 
 
 # ============================================================================
@@ -1491,7 +1494,7 @@ def load_config(
         raise ValueError(
             f"❌ VERSION NON SUPPORTÉE: Config version '{config_version}' détectée.\n"
             f"Versions supportées: {', '.join(supported_versions)}\n"
-            f"Config Loader v2.3.3 nécessite structure config >= 2.2.3.\n"
+            f"Config Loader v{_RUNTIME_VERSION} nécessite structure config >= 2.2.3.\n"
             f"Veuillez mettre à jour config.json selon MIGRATION.md"
         )
     

@@ -18,10 +18,36 @@ Position dans l'architecture :
     ├── trading_engine.py      → Simulation sessions de trading
     └── analytics_engine.py   → Génération rapports & analyses
 
-Version: 2.2.2
-Date: 2026-03-13
+Version: 2.3.0
+Date: 2026-06-27
 Author: FuegoDev
 Mode: ✅ Backtest | ⚠️ Paper (partiel) | ❌ Live (sous-classe à implémenter)
+
+Changelog:
+    v2.3.1 — 2026-06-28
+        [FIX-ENG-DEDUP-TF] Suppression de _parse_timeframe_minutes(), dupliquée
+            avec ohlcv_data_engine._timeframe_to_minutes(). La justification
+            initiale (import circulaire engine.py <-> ohlcv_data_engine.py) a
+            été vérifiée inexistante. Les 2 call-sites (_validate_dataset_
+            coverage, _compute_warmup_window) utilisent désormais
+            src.utils.helpers.parse_timeframe_to_minutes() comme source de
+            vérité unique (audit Phase 4/8, MINEUR m7).
+    v2.3.0 — 2026-06-27
+        [FIX-ENG-GLOBAL-REPORT] Ajout de _generate_global_report() : rapport
+            agrégé multi-session ('GLOBAL_AGGREGATE') généré après la boucle
+            de sessions si >= 2 sessions exécutées. Concatène les trades de
+            toutes les sessions et délègue à AnalyticsEngine.generate_reports()
+            (aucune logique de métriques dupliquée). Débloque CAGR/Sharpe/
+            Sortino/Calmar, jamais atteignables par session individuelle
+            (10j < _CAGR_MIN_DAYS=30j) (audit Phase 5/8, MAJEUR M2 + M8).
+    v2.2.3 — 2026-06-27
+        [FIX-ENG-ATR-ORDER] ATRIndicator instancié à l'étape 3.5 (avant
+            RiskManager) au lieu de l'étape 7 (après OrderSimulator).
+            Injecté dans RiskManager ET OrderSimulator en plus de
+            PositionManager/MarketContextCapture. Corrige un ATR
+            indisponible (_atr_available=False) pour RiskManager pendant
+            tout le run, et un calcul ATR dupliqué/incohérent dans
+            OrderSimulator (audit Phase 4/8, MAJEUR M3, MINEUR m2).
 """
 
 from __future__ import annotations
@@ -54,7 +80,12 @@ if str(_PROJECT_ROOT) not in sys.path:
 # ============================================================================
 
 from src.utils.logger import BulletLogger
-from src.utils.helpers import format_datetime, get_project_root, timestamp_to_datetime
+from src.utils.helpers import (
+    format_datetime,
+    get_project_root,
+    timestamp_to_datetime,
+    parse_timeframe_to_minutes,  # [FIX-ENG-DEDUP-TF] source de vérité unique
+)
 from src.utils.config_loader import load_config, BulletConfig
 
 from src.backtesting.ohlcv_data_engine import OHLCVDataEngine
@@ -98,37 +129,6 @@ _REQUIRED_BACKTESTING_KEYS: Tuple[Tuple[str, str], ...] = (
 )
 
 
-# ============================================================================
-# HELPERS MODULE-LEVEL
-# ============================================================================
-
-def _parse_timeframe_minutes(timeframe: str) -> int:
-    """
-    Convertit un timeframe string en minutes entier.
-
-    [v2.1.6 — FIX-ENG-3] Utilisé par _extract_session_slice pour calculer
-    le delta de warmup. Dupliqué depuis ohlcv_data_engine._timeframe_to_minutes
-    pour éviter tout import circulaire (engine → ohlcv_data_engine → engine).
-
-    Returns 0 si le format est inconnu (warmup désactivé silencieusement).
-    """
-    tf = timeframe.strip().lower()
-    _KNOWN: dict = {
-        '1m': 1, '3m': 3, '5m': 5, '10m': 10, '15m': 15,
-        '30m': 30, '45m': 45,
-        '1h': 60, '2h': 120, '3h': 180, '4h': 240, '6h': 360,
-        '8h': 480, '12h': 720,
-        '1d': 1440, '3d': 4320, '1w': 10080,
-    }
-    if tf in _KNOWN:
-        return _KNOWN[tf]
-    for suffix, factor in (('m', 1), ('h', 60), ('d', 1440), ('w', 10080)):
-        if tf.endswith(suffix):
-            try:
-                return int(tf[:-len(suffix)]) * factor
-            except ValueError:
-                pass
-    return 0   # Format inconnu → warmup désactivé silencieusement
 
 
 # ============================================================================
@@ -527,11 +527,13 @@ class Engine:
             1. OHLCVDataEngine  — aucune dépendance inter-module
             2. SessionManager   — source de vérité capital
             3. SignalGenerator  — génère les signaux bruts
-            4. RiskManager      — calcule le risque
+            3.5. ATRIndicator   — requis si trailing type='atr'/'hybrid'
+                 [FIX-ENG-ATR-ORDER] Déplacé de l'étape 7 à 3.5 : RiskManager
+                 et OrderSimulator en dépendent tous deux désormais (cf. 4 et 6).
+            4. RiskManager      — calcule le risque ; reçoit 3.5 par injection
             5. Strategy         — reçoit 3 et 4 par injection
-            6. OrderSimulator   — exécute les ordres
-            7. ATRIndicator     — requis si trailing type='atr'/'hybrid'
-            8. PositionManager  — reçoit 7 par injection
+            6. OrderSimulator   — exécute les ordres ; reçoit 3.5 par injection
+            8. PositionManager  — reçoit 3.5 par injection
             9. TradingEngine    — reçoit 2, 5, 6, 8 par injection
            10. AnalyticsEngine  — sans dépendance (stateless, config autonome)
 
@@ -570,9 +572,29 @@ class Engine:
             self.logger.debug("  [3/10] SignalGenerator...")
             signal_generator = SignalGenerator(config=cfg)
 
-            # ── 4. RiskManager — calcule le risque ───────────────────────────
+            # ── 3.5. ATRIndicator — requis si trailing type='atr'/'hybrid' ───
+            # [v2.1.7 — FIX-ENG-ATR-ORDER] Déplacé de l'étape 7 (après
+            # OrderSimulator) à l'étape 3.5 (avant RiskManager). Avant ce fix,
+            # RiskManager était instancié à l'étape 4 SANS atr_indicator, donc
+            # `_atr_available=False` de façon permanente : la validation de
+            # marché basée sur l'ATR (validate_market_conditions) était
+            # silencieusement désactivée pour toute la durée du run, et
+            # `set_atr_indicator()` n'était jamais appelé pour corriger ce
+            # manque a posteriori (audit Phase 4/8, MAJEUR M3 / MINEUR m2).
+            # Cette même instance est désormais réutilisée par RiskManager,
+            # OrderSimulator, PositionManager et MarketContextCapture :
+            # un seul calcul ATR, une seule source de vérité.
+            self.logger.debug("  [3.5/10] ATRIndicator...")
+            trailing_type = cfg['strategy']['trailing_stop']['type']
+            atr_indicator = ATRIndicator(config=cfg) if trailing_type in ('atr', 'hybrid') else None
+
+            # ── 4. RiskManager — calcule le risque ; reçoit atr_indicator ────
+            # [v2.1.7 — FIX-ENG-ATR-ORDER] atr_indicator injecté dès la
+            # construction (paramètre déjà supporté par RiskManager.__init__,
+            # cf. src/core/risk_manager.py) — set_atr_indicator() devient
+            # inutile dans ce flux nominal.
             self.logger.debug("  [4/10] RiskManager...")
-            risk_manager = RiskManager(config=cfg)
+            risk_manager = RiskManager(config=cfg, atr_indicator=atr_indicator)
 
             # ── 5. Strategy — reçoit ses dépendances par injection ───────────
             self.logger.debug("  [5/10] Strategy (DI)...")
@@ -582,18 +604,19 @@ class Engine:
                 risk_manager=risk_manager,
             )
 
-            # ── 6. OrderSimulator — exécute les ordres ───────────────────────
+            # ── 6. OrderSimulator — exécute les ordres ; reçoit atr_indicator ─
+            # [v2.1.7 — FIX-ENG-ATR-ORDER] atr_indicator injecté pour que
+            # _compute_volatility_from_atr() utilise le même calcul ATR que
+            # RiskManager/PositionManager au lieu de recalculer un ATR
+            # indépendant via calculate_atr_simple(period=14) (audit Phase 4/8,
+            # MAJEUR M3 — slippage dynamique incohérent avec le reste du système).
             self.logger.debug("  [6/10] OrderSimulator...")
             order_simulator = OrderSimulator(
                 session_manager=session_manager,
                 mode=cfg['general']['mode'],
                 config=cfg,
+                atr_indicator=atr_indicator,
             )
-
-            # ── 7. ATRIndicator — requis si trailing type='atr'/'hybrid' ─────
-            self.logger.debug("  [7/10] ATRIndicator...")
-            trailing_type = cfg['strategy']['trailing_stop']['type']
-            atr_indicator = ATRIndicator(config=cfg) if trailing_type in ('atr', 'hybrid') else None
 
             # ── 8. PositionManager — reçoit atr_indicator par injection ──────
             self.logger.debug("  [8/10] PositionManager...")
@@ -659,7 +682,7 @@ class Engine:
                 market_context = None
             else:
                 # [v2.1.5 — FEAT-MC-1] Instanciation de MarketContextCapture.
-                # L'instance ATRIndicator (déjà créée à l'étape 7) est RÉUTILISÉE :
+                # L'instance ATRIndicator (déjà créée à l'étape 3.5) est RÉUTILISÉE :
                 # cohérence de configuration garantie, zéro surcoût de calcul.
                 # Toute erreur d'initialisation est absorbée (non-fatale) : le backtest
                 # continue sans capture de contexte marché plutôt que de s'interrompre.
@@ -944,7 +967,7 @@ class Engine:
         #   → timeframes journaliers+ : 1 jour (comportement inchangé)
         # Fallback sur 1 jour si timeframe inconnu (dégradation gracieuse).
         tf_str      = (self._config_dict or {}).get('general', {}).get('timeframe', '')
-        tf_minutes  = _parse_timeframe_minutes(tf_str)
+        tf_minutes  = parse_timeframe_to_minutes(tf_str)  # [FIX-ENG-DEDUP-TF]
         if tf_minutes > 0:
             tolerance = max(timedelta(minutes=tf_minutes), timedelta(days=1))
         else:
@@ -1260,7 +1283,7 @@ class Engine:
         ec           = (self._config_dict or {}).get('engine_config', {})
         warmup_n     = int(ec.get('market_context_min_candles', 300))
         tf_str       = (self._config_dict or {}).get('general', {}).get('timeframe', '')
-        tf_minutes   = _parse_timeframe_minutes(tf_str)
+        tf_minutes   = parse_timeframe_to_minutes(tf_str)  # [FIX-ENG-DEDUP-TF]
 
         if warmup_n <= 0 or tf_minutes <= 0:
             return pd.DataFrame()
@@ -1314,9 +1337,13 @@ class Engine:
             - engine.py log un WARNING si des erreurs analytics sont retournées,
               mais ne bloque PAS l'exécution des sessions suivantes.
             - Aucune transformation analytique n'est effectuée ici.
+            - [FIX-ENG-GLOBAL-REPORT] Si au moins 2 sessions ont été exécutées,
+              un rapport agrégé supplémentaire ('GLOBAL_AGGREGATE') est généré
+              après la boucle par-session — voir _generate_global_report().
 
         Post-conditions :
-            self._all_analytics_paths contient un dict de paths par session.
+            self._all_analytics_paths contient un dict de paths par session,
+            plus un dict additionnel pour GLOBAL_AGGREGATE si applicable.
         """
         assert self._analytics_engine is not None
 
@@ -1369,6 +1396,131 @@ class Engine:
             f"{len(self._all_analytics_paths)} session(s) | "
             f"{analytics_errors_total} erreur(s) analytics totale(s)"
         )
+
+        # [FIX-ENG-GLOBAL-REPORT — v2.3.0] Rapport agrégé multi-session.
+        # Débloque CAGR/Sharpe/Sortino/Calmar (audit Phase 5/8, MAJEUR M2 +
+        # MAJEUR M8) : ces métriques exigent _CAGR_MIN_DAYS=30 jours
+        # consécutifs (cf. metrics.py L46), durée jamais atteinte par une
+        # session individuelle (trades_period_days=10j < 30j). En agrégeant
+        # les trades de toutes les sessions, la durée réelle couverte
+        # (first entry → last exit) dépasse le seuil et les métriques
+        # annualisées deviennent calculables — sans toucher à
+        # _CAGR_MIN_DAYS ni à la logique de session individuelle.
+        if len(self._all_session_results) >= 2:
+            self._generate_global_report()
+        else:
+            self.logger.debug(
+                "Rapport agrégé GLOBAL_AGGREGATE non généré — "
+                f"{len(self._all_session_results)} session(s) < 2 (minimum requis)."
+            )
+
+    def _generate_global_report(self) -> None:
+        """Génère un rapport agrégé couvrant toutes les sessions du run.
+
+        Construit un ``EngineRunResult``-compatible (dict) en concaténant
+        les trades de chaque session déjà exécutée, puis délègue la
+        génération de rapports à ``AnalyticsEngine.generate_reports()`` —
+        aucune logique de calcul de métriques n'est dupliquée ici.
+
+        Le résultat porte ``session_id='GLOBAL_AGGREGATE'`` et
+        ``session_n=0`` pour le distinguer sans ambiguïté des sessions
+        individuelles (numérotées à partir de 1) dans
+        ``results/backtests/sessions/``.
+
+        Capital initial : ``initial_capital`` de la session 1 (premier
+        capital réellement engagé sur le run).
+        Capital final : ``final_funds`` de la dernière session exécutée
+        (capital réel après la dernière session, qu'elle ait réussi ou
+        échoué prématurément).
+
+        Pré-conditions :
+            ``self._all_session_results`` contient au moins 2 éléments
+            (vérifié par l'appelant, ``_phase_run_analytics()``).
+
+        Post-conditions :
+            Le dict de chemins retourné par ``generate_reports()`` est
+            ajouté à ``self._all_analytics_paths`` au même titre que les
+            rapports par session — aucune structure de sortie nouvelle
+            n'est introduite côté ``Engine.run()``.
+
+        Notes:
+            Cette méthode ne lève jamais d'exception : toute erreur est
+            absorbée par ``AnalyticsEngine.generate_reports()`` lui-même
+            (contrat identique aux rapports par session), conformément à
+            la garantie de non-blocage du pipeline.
+        """
+        assert self._analytics_engine is not None
+
+        self.logger.log_separator('INFO', '-', 60)
+        self.logger.info(
+            f"PHASE 5b — Rapport agrégé GLOBAL_AGGREGATE "
+            f"({len(self._all_session_results)} sessions)"
+        )
+
+        all_trades: List[Dict[str, Any]] = []
+        for result in self._all_session_results:
+            all_trades.extend(result.trades)
+
+        first_summary = self._all_session_results[0].session_summary
+        last_summary  = self._all_session_results[-1].session_summary
+
+        global_result: Dict[str, Any] = {
+            'session_id':        'GLOBAL_AGGREGATE',
+            'session_summary': {
+                'session_id':      'GLOBAL_AGGREGATE',
+                'session_n':       0,
+                'start_date':      first_summary.get('start_date', ''),
+                'end_date':        last_summary.get('end_date', ''),
+                'initial_capital': first_summary.get('initial_capital'),
+                'initial_funds':   first_summary.get('initial_capital'),
+                'final_funds':     last_summary.get('final_funds'),
+                'mode':            first_summary.get('mode', 'backtest'),
+            },
+            'trades':            all_trades,
+            'closed_positions':  [],
+            'strategy_stats':    {},
+            'simulator_stats':   {},
+            'step_results':      {},
+            'errors':            [],
+            'candles_processed': sum(
+                r.candles_processed for r in self._all_session_results
+            ),
+        }
+
+        self.logger.info(
+            f"   GLOBAL_AGGREGATE : {len(all_trades)} trade(s) cumulé(s) | "
+            f"capital initial={global_result['session_summary']['initial_capital']} | "
+            f"capital final={global_result['session_summary']['final_funds']}"
+        )
+
+        try:
+            paths = self._analytics_engine.generate_reports(global_result)
+        except Exception as exc:
+            # Defensive catch — generate_reports() ne devrait jamais lever,
+            # mais on garantit la résilience du pipeline dans tous les cas
+            # (même contrat que la boucle par-session ci-dessus).
+            self.logger.exception(
+                f"⚠️  Rapport GLOBAL_AGGREGATE : exception inattendue (non-fatale) : {exc}"
+            )
+            paths = {
+                'session_dir': None,
+                'html': None, 'markdown': None, 'text': None,
+                'json': None, 'csv': None,
+                'errors': [f"Exception inattendue : {type(exc).__name__}: {exc}"],
+            }
+
+        global_errors = paths.get('errors', [])
+        if global_errors:
+            self.logger.warning(
+                f"⚠️  GLOBAL_AGGREGATE : {len(global_errors)} erreur(s) analytics "
+                f"(non-fatales) : {global_errors}"
+            )
+
+        session_dir = paths.get('session_dir')
+        if session_dir:
+            self.logger.info(f"   ✅ Rapport GLOBAL_AGGREGATE → {session_dir}")
+
+        self._all_analytics_paths.append(paths)
 
     # =========================================================================
     # HOOK D'EXTENSIBILITÉ

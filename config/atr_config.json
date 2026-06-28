@@ -3,8 +3,8 @@
     "mode": "backtest"
   },
   "atr_parameters": {
-    "period": 21,
-    "base_multiplier": 2.0,
+    "period": 7,
+    "base_multiplier": 2.5,
     "smoothing_method": "ema"
   },
   "validation_limits": {
