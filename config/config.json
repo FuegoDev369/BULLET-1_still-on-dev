@@ -5,7 +5,7 @@
     "version": "2.1",
     "mode": "backtest",
     "exchange": "binance",
-    "trading_pair": "BTC/USDT",
+    "trading_pair": "BNB/USDT",
     "timeframe": "5m",
     "timezone": "UTC"
   },
@@ -153,16 +153,16 @@
   },
   "backtesting": {
     "db_path": "data/bullet1_market_data.db",
-    "start_date": "2024-05-01",
-    "end_date": "2024-06-20",
+    "start_date": "2024-01-01",
+    "end_date": "2024-03-11",
     "simulation": {
       "maker_fee": 0.02,
-      "taker_fee": 0.04,
-      "slippage_base": 0.0012,
-      "slippage_max": 0.005,
+      "taker_fee": 0.05,
+      "slippage_base": 0.002,
+      "slippage_max": 0.007,
       "slippage_dynamic": true,
-      "spread_pct": 0.008,
-      "api_latency_ms": 200,
+      "spread_pct": 0.01,
+      "api_latency_ms": 100,
       "funding_rate_8h": 0.01
     }
   },
