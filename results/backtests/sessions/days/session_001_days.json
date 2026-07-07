@@ -1,109 +1,109 @@
 {
   "session_n": 1,
-  "saved_at": "2026-06-28 10:20:01",
+  "saved_at": "2026-07-07 11:17:48",
   "total_days": 10,
   "timezone": "UTC",
   "version": "2.2.2",
   "days": [
     {
-      "date": "2024-05-01 00:00:00",
+      "date": "2024-01-01 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:19:59"
+      "ended_at": "2026-07-07 11:17:46"
     },
     {
-      "date": "2024-05-02 00:00:00",
+      "date": "2024-01-02 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:19:59"
+      "ended_at": "2026-07-07 11:17:46"
     },
     {
-      "date": "2024-05-03 00:00:00",
+      "date": "2024-01-03 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:20:00"
+      "ended_at": "2026-07-07 11:17:46"
     },
     {
-      "date": "2024-05-04 00:00:00",
+      "date": "2024-01-04 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:20:00"
+      "ended_at": "2026-07-07 11:17:47"
     },
     {
-      "date": "2024-05-05 00:00:00",
+      "date": "2024-01-05 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:20:00"
+      "ended_at": "2026-07-07 11:17:47"
     },
     {
-      "date": "2024-05-06 00:00:00",
+      "date": "2024-01-06 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:20:00"
+      "ended_at": "2026-07-07 11:17:47"
     },
     {
-      "date": "2024-05-07 00:00:00",
+      "date": "2024-01-07 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:20:00"
+      "ended_at": "2026-07-07 11:17:47"
     },
     {
-      "date": "2024-05-08 00:00:00",
+      "date": "2024-01-08 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:20:01"
+      "ended_at": "2026-07-07 11:17:48"
     },
     {
-      "date": "2024-05-09 00:00:00",
+      "date": "2024-01-09 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "midnight_transition",
-      "ended_at": "2026-06-28 10:20:01"
+      "ended_at": "2026-07-07 11:17:48"
     },
     {
-      "date": "2024-05-10 00:00:00",
+      "date": "2024-01-10 00:00:00",
       "starting_balance": 100.0,
       "ending_balance": 100.0,
       "daily_pnl": 0.0,
       "daily_pnl_pct": 0.0,
       "trades_count": 0,
       "end_reason": "session_ended",
-      "ended_at": "2026-06-28 10:20:01"
+      "ended_at": "2026-07-07 11:17:48"
     }
   ]
 }

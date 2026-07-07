@@ -154,7 +154,7 @@
   "backtesting": {
     "db_path": "data/bullet1_market_data.db",
     "start_date": "2024-01-01",
-    "end_date": "2024-03-11",
+    "end_date": "2024-01-11",
     "simulation": {
       "maker_fee": 0.02,
       "taker_fee": 0.05,
