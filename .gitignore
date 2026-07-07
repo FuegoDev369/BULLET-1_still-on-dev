@@ -7,6 +7,16 @@ FIND_IT_v3.0.1.py
 sniper_cleaner_v1.1.0.py
 structure_tracker_v1.0.py
 
-
 ## Indésirables
 data/bullet1_market_data.db-journal
+bullet1_market_data.db-journal
+__pycache__/
+
+# Standby
+data/standby/
+standby/
+
+#Keep it
+data/Downloads/
+logs/
+data/historical/
